@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Major Explorer"
+version = "1.0.0"
+id = "artifacts/major-explorer"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22071
+
+[services.development]
+run = "pnpm --filter @workspace/major-explorer run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/major-explorer", "run", "build" ]
+publicDir = "artifacts/major-explorer/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22071"
+BASE_PATH = "/"

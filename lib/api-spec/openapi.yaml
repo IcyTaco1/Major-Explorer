@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
@@ -10,6 +9,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: majors
+    description: College major lookup
 paths:
   /healthz:
     get:
@@ -24,6 +25,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /majors/lookup:
+    post:
+      operationId: lookupMajor
+      tags: [majors]
+      summary: Look up a college major
+      description: Returns a description and top 10 colleges for a given major
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MajorLookupRequest"
+      responses:
+        "200":
+          description: Major info and top colleges
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MajorLookupResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +59,49 @@ components:
           type: string
       required:
         - status
-
+    MajorLookupRequest:
+      type: object
+      properties:
+        major:
+          type: string
+          description: The college major to look up
+      required:
+        - major
+    College:
+      type: object
+      properties:
+        rank:
+          type: integer
+        name:
+          type: string
+        location:
+          type: string
+        highlights:
+          type: string
+      required:
+        - rank
+        - name
+        - location
+        - highlights
+    MajorLookupResponse:
+      type: object
+      properties:
+        major:
+          type: string
+        description:
+          type: string
+        topColleges:
+          type: array
+          items:
+            $ref: "#/components/schemas/College"
+      required:
+        - major
+        - description
+        - topColleges
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

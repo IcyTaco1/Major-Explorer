@@ -14,3 +14,24 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Returns a description and top 10 colleges for a given major
+ * @summary Look up a college major
+ */
+export const LookupMajorBody = zod.object({
+  major: zod.string().describe("The college major to look up"),
+});
+
+export const LookupMajorResponse = zod.object({
+  major: zod.string(),
+  description: zod.string(),
+  topColleges: zod.array(
+    zod.object({
+      rank: zod.number(),
+      name: zod.string(),
+      location: zod.string(),
+      highlights: zod.string(),
+    }),
+  ),
+});

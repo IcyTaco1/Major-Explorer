@@ -8,3 +8,25 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface MajorLookupRequest {
+  /** The college major to look up */
+  major: string;
+}
+
+export interface College {
+  rank: number;
+  name: string;
+  location: string;
+  highlights: string;
+}
+
+export interface MajorLookupResponse {
+  major: string;
+  description: string;
+  topColleges: College[];
+}
+
+export interface ErrorResponse {
+  error: string;
+}

@@ -35,3 +35,30 @@ export const LookupMajorResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * Returns a year-by-year course breakdown for a major at a specific college
+ * @summary Get 4-year curriculum for a major at a specific college
+ */
+export const GetMajorCurriculumBody = zod.object({
+  major: zod.string().describe("The college major"),
+  college: zod.string().describe("The college name"),
+});
+
+export const GetMajorCurriculumResponse = zod.object({
+  major: zod.string(),
+  college: zod.string(),
+  years: zod.array(
+    zod.object({
+      year: zod.number(),
+      label: zod.string(),
+      focus: zod.string(),
+      courses: zod.array(
+        zod.object({
+          name: zod.string(),
+          description: zod.string(),
+        }),
+      ),
+    }),
+  ),
+});

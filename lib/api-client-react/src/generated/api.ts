@@ -17,6 +17,8 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  CurriculumRequest,
+  CurriculumResponse,
   ErrorResponse,
   HealthStatus,
   MajorLookupRequest,
@@ -193,4 +195,91 @@ export const useLookupMajor = <
   TContext
 > => {
   return useMutation(getLookupMajorMutationOptions(options));
+};
+
+/**
+ * Returns a year-by-year course breakdown for a major at a specific college
+ * @summary Get 4-year curriculum for a major at a specific college
+ */
+export const getGetMajorCurriculumUrl = () => {
+  return `/api/majors/curriculum`;
+};
+
+export const getMajorCurriculum = async (
+  curriculumRequest: CurriculumRequest,
+  options?: RequestInit,
+): Promise<CurriculumResponse> => {
+  return customFetch<CurriculumResponse>(getGetMajorCurriculumUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(curriculumRequest),
+  });
+};
+
+export const getGetMajorCurriculumMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getMajorCurriculum>>,
+    TError,
+    { data: BodyType<CurriculumRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getMajorCurriculum>>,
+  TError,
+  { data: BodyType<CurriculumRequest> },
+  TContext
+> => {
+  const mutationKey = ["getMajorCurriculum"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getMajorCurriculum>>,
+    { data: BodyType<CurriculumRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return getMajorCurriculum(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetMajorCurriculumMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getMajorCurriculum>>
+>;
+export type GetMajorCurriculumMutationBody = BodyType<CurriculumRequest>;
+export type GetMajorCurriculumMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get 4-year curriculum for a major at a specific college
+ */
+export const useGetMajorCurriculum = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getMajorCurriculum>>,
+    TError,
+    { data: BodyType<CurriculumRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getMajorCurriculum>>,
+  TError,
+  { data: BodyType<CurriculumRequest> },
+  TContext
+> => {
+  return useMutation(getGetMajorCurriculumMutationOptions(options));
 };

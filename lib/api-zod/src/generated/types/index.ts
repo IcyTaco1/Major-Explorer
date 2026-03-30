@@ -7,7 +7,11 @@
  */
 
 export * from "./college";
+export * from "./course";
+export * from "./curriculumRequest";
+export * from "./curriculumResponse";
 export * from "./errorResponse";
 export * from "./healthStatus";
 export * from "./majorLookupRequest";
 export * from "./majorLookupResponse";
+export * from "./yearPlan";

@@ -27,6 +27,31 @@ export interface MajorLookupResponse {
   topColleges: College[];
 }
 
+export interface CurriculumRequest {
+  /** The college major */
+  major: string;
+  /** The college name */
+  college: string;
+}
+
+export interface Course {
+  name: string;
+  description: string;
+}
+
+export interface YearPlan {
+  year: number;
+  label: string;
+  focus: string;
+  courses: Course[];
+}
+
+export interface CurriculumResponse {
+  major: string;
+  college: string;
+  years: YearPlan[];
+}
+
 export interface ErrorResponse {
   error: string;
 }

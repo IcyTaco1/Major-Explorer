@@ -50,6 +50,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /majors/curriculum:
+    post:
+      operationId: getMajorCurriculum
+      tags: [majors]
+      summary: Get 4-year curriculum for a major at a specific college
+      description: Returns a year-by-year course breakdown for a major at a specific college
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CurriculumRequest"
+      responses:
+        "200":
+          description: 4-year curriculum
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurriculumResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -98,6 +123,61 @@ components:
         - major
         - description
         - topColleges
+    CurriculumRequest:
+      type: object
+      properties:
+        major:
+          type: string
+          description: The college major
+        college:
+          type: string
+          description: The college name
+      required:
+        - major
+        - college
+    Course:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+      required:
+        - name
+        - description
+    YearPlan:
+      type: object
+      properties:
+        year:
+          type: integer
+        label:
+          type: string
+        focus:
+          type: string
+        courses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Course"
+      required:
+        - year
+        - label
+        - focus
+        - courses
+    CurriculumResponse:
+      type: object
+      properties:
+        major:
+          type: string
+        college:
+          type: string
+        years:
+          type: array
+          items:
+            $ref: "#/components/schemas/YearPlan"
+      required:
+        - major
+        - college
+        - years
     ErrorResponse:
       type: object
       properties:

@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useLookupMajor, useGetMajorCurriculum } from "@workspace/api-client-react";
 import type { College, CurriculumResponse } from "@workspace/api-client-react";
 import {
-  Search, GraduationCap, MapPin, BookMarked, AlertCircle, X,
+  Search, GraduationCap, MapPin, Milestone, AlertCircle, X,
   ChevronRight, Bookmark, BookmarkCheck, Trash2, ArrowUpDown,
   ChevronDown, ChevronUp, SortAsc
 } from "lucide-react";
@@ -559,10 +559,13 @@ function AppShell() {
     <div className="min-h-screen w-full bg-slate-50 flex flex-col">
       {/* Header */}
       <header className="w-full py-4 px-6 lg:px-12 flex items-center justify-between border-b border-slate-200 bg-white shadow-sm sticky top-0 z-40">
-        <div className="flex items-center gap-2 text-slate-900">
-          <BookMarked className="w-5 h-5 text-slate-700" />
-          <span className="font-serif font-semibold text-lg tracking-tight">Declare</span>
-        </div>
+        <button
+          onClick={() => setView("explore")}
+          className="flex items-center gap-2 text-slate-900 hover:opacity-75 transition-opacity"
+        >
+          <Milestone className="w-5 h-5 text-slate-700" />
+          <span className="font-serif font-semibold text-lg tracking-tight">Next Steps</span>
+        </button>
         <nav className="flex items-center gap-1">
           <button
             onClick={() => setView("explore")}

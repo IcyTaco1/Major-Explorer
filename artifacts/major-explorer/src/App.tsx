@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useLookupMajor, useGetMajorCurriculum } from "@workspace/api-client-react";
 import type { College, CurriculumResponse } from "@workspace/api-client-react";
-import { Search, GraduationCap, MapPin, BookOpen, AlertCircle, X, ChevronRight } from "lucide-react";
+import { Search, GraduationCap, MapPin, Compass, AlertCircle, X, ChevronRight } from "lucide-react";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -153,8 +153,8 @@ function Home() {
     <div className="min-h-screen w-full bg-slate-50 flex flex-col">
       <header className="w-full py-5 px-6 lg:px-12 flex items-center justify-between border-b border-slate-200 bg-white shadow-sm">
         <div className="flex items-center gap-2 text-slate-900">
-          <BookOpen className="w-5 h-5 text-slate-700" />
-          <span className="font-serif font-semibold text-lg tracking-tight">Major Explorer</span>
+          <Compass className="w-5 h-5 text-slate-700" />
+          <span className="font-serif font-semibold text-lg tracking-tight">Prospectus</span>
         </div>
       </header>
 

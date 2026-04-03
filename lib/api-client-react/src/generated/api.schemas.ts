@@ -55,3 +55,18 @@ export interface CurriculumResponse {
 export interface ErrorResponse {
   error: string;
 }
+
+export type ChatMessageRole = "user" | "assistant";
+
+export interface ChatMessage {
+  role: ChatMessageRole;
+  content: string;
+}
+
+export interface ChatRequest {
+  messages: ChatMessage[];
+}
+
+export interface ChatResponse {
+  reply: string;
+}

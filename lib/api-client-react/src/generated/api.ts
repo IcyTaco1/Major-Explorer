@@ -17,6 +17,8 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  ChatRequest,
+  ChatResponse,
   CurriculumRequest,
   CurriculumResponse,
   ErrorResponse,
@@ -282,4 +284,88 @@ export const useGetMajorCurriculum = <
   TContext
 > => {
   return useMutation(getGetMajorCurriculumMutationOptions(options));
+};
+
+/**
+ * Send a conversation history and receive an AI response
+ * @summary Chat with AI advisor
+ */
+export const getChatUrl = () => {
+  return `/api/chat`;
+};
+
+export const chat = async (
+  chatRequest: ChatRequest,
+  options?: RequestInit,
+): Promise<ChatResponse> => {
+  return customFetch<ChatResponse>(getChatUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(chatRequest),
+  });
+};
+
+export const getChatMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof chat>>,
+    TError,
+    { data: BodyType<ChatRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof chat>>,
+  TError,
+  { data: BodyType<ChatRequest> },
+  TContext
+> => {
+  const mutationKey = ["chat"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof chat>>,
+    { data: BodyType<ChatRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+    return chat(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChatMutationResult = NonNullable<Awaited<ReturnType<typeof chat>>>;
+export type ChatMutationBody = BodyType<ChatRequest>;
+export type ChatMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Chat with AI advisor
+ */
+export const useChat = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof chat>>,
+    TError,
+    { data: BodyType<ChatRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof chat>>,
+  TError,
+  { data: BodyType<ChatRequest> },
+  TContext
+> => {
+  return useMutation(getChatMutationOptions(options));
 };

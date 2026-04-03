@@ -75,6 +75,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /chat:
+    post:
+      operationId: chat
+      tags: [chat]
+      summary: Chat with AI advisor
+      description: Send a conversation history and receive an AI response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: AI reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -178,6 +203,33 @@ components:
         - major
         - college
         - years
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+      required:
+        - role
+        - content
+    ChatRequest:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+      required:
+        - messages
+    ChatResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+      required:
+        - reply
     ErrorResponse:
       type: object
       properties:

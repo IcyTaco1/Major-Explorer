@@ -300,7 +300,7 @@ function MyCollegesView({ myColleges, onRemove }: {
                         <p className="text-slate-400 text-xs">{college.location}</p>
                       </div>
                     </div>
-                    <button onClick={() => onRemove(college.name, majorName)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100" title="Remove">
+                    <button onClick={() => onRemove(college.name, majorName)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors flex-shrink-0" title="Remove">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </li>

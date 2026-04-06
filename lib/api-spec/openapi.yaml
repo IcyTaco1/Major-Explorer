@@ -133,6 +133,19 @@ components:
         - name
         - location
         - highlights
+    SalaryInfo:
+      type: object
+      properties:
+        entryLevel:
+          type: string
+        midCareer:
+          type: string
+        experienced:
+          type: string
+      required:
+        - entryLevel
+        - midCareer
+        - experienced
     MajorLookupResponse:
       type: object
       properties:
@@ -140,6 +153,8 @@ components:
           type: string
         description:
           type: string
+        salary:
+          $ref: "#/components/schemas/SalaryInfo"
         topColleges:
           type: array
           items:
@@ -147,6 +162,7 @@ components:
       required:
         - major
         - description
+        - salary
         - topColleges
     CurriculumRequest:
       type: object

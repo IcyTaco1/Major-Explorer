@@ -21,9 +21,16 @@ export interface College {
   highlights: string;
 }
 
+export interface SalaryInfo {
+  entryLevel: string;
+  midCareer: string;
+  experienced: string;
+}
+
 export interface MajorLookupResponse {
   major: string;
   description: string;
+  salary: SalaryInfo;
   topColleges: College[];
 }
 

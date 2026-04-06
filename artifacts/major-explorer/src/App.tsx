@@ -496,7 +496,32 @@ function ExploreView({
                   {isMajorSaved(result.major) ? <><BookmarkCheck className="w-4 h-4" /> Saved</> : <><Bookmark className="w-4 h-4" /> Save Major</>}
                 </button>
               </div>
-              <p className="text-lg leading-relaxed text-slate-700 relative z-10" data-testid="text-major-description">{result.description}</p>
+              <p className="text-lg leading-relaxed text-slate-700 relative z-10 mb-8" data-testid="text-major-description">{result.description}</p>
+              {result.salary && (
+                <div className="relative z-10 border-t border-slate-100 pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <DollarSign className="w-4 h-4 text-slate-500" />
+                    <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Average Salaries</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-slate-50 rounded-xl p-4 text-center">
+                      <p className="text-xs text-slate-400 mb-1 font-medium">Entry Level</p>
+                      <p className="text-lg font-bold text-slate-800">{result.salary.entryLevel}</p>
+                      <p className="text-xs text-slate-400 mt-1">0–2 years</p>
+                    </div>
+                    <div className="bg-indigo-50 rounded-xl p-4 text-center ring-1 ring-indigo-100">
+                      <p className="text-xs text-indigo-400 mb-1 font-medium">Mid-Career</p>
+                      <p className="text-lg font-bold text-indigo-700">{result.salary.midCareer}</p>
+                      <p className="text-xs text-indigo-300 mt-1">5–10 years</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-4 text-center">
+                      <p className="text-xs text-slate-400 mb-1 font-medium">Experienced</p>
+                      <p className="text-lg font-bold text-slate-800">{result.salary.experienced}</p>
+                      <p className="text-xs text-slate-400 mt-1">15+ years</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* College Cards */}

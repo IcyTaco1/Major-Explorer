@@ -27,6 +27,11 @@ For the "${trimmedMajor}" major, respond ONLY with a valid JSON object in this e
 {
   "major": "<normalized major name>",
   "description": "<A friendly, easy-to-understand 5-7 sentence paragraph about the ${trimmedMajor} major. Write like you're explaining it to a curious high schooler who knows nothing about it. Use simple words, avoid jargon, and make it feel exciting and relatable. Explain what students actually do day-to-day, what kinds of jobs they can get after, and why it matters in everyday life.>",
+  "salary": {
+    "entryLevel": "<Typical starting salary for a ${trimmedMajor} graduate, e.g. '$52,000'>",
+    "midCareer": "<Typical mid-career salary (5-10 years experience) for ${trimmedMajor}, e.g. '$78,000'>",
+    "experienced": "<Typical experienced salary (15+ years) for ${trimmedMajor}, e.g. '$110,000'>"
+  },
   "topColleges": [
     {
       "rank": 1,
@@ -40,6 +45,7 @@ For the "${trimmedMajor}" major, respond ONLY with a valid JSON object in this e
 
 Requirements:
 - The description must be 5-7 sentences, friendly, simple, and engaging — no academic jargon
+- The salary figures must be realistic US national medians based on BLS or similar data, formatted as "$XX,000" with no ranges, just a single number per level
 - List exactly 10 colleges ranked 1-10 based on reputation for ${trimmedMajor}
 - Use well-known, reputable US universities only
 - Return only the JSON, nothing else`;

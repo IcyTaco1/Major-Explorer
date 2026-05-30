@@ -77,6 +77,14 @@ const clerkAppearance = {
     formFieldRow: "",
     main: "",
   },
+  signUp: {
+    elements: {
+      socialButtons: "hidden",
+      socialButtonsBlockButton: "hidden",
+      socialButtonsIconButton: "hidden",
+      dividerRow: "hidden",
+    },
+  },
 };
 
 // ─── QueryClient ──────────────────────────────────────────────────────

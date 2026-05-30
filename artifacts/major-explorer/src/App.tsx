@@ -207,10 +207,44 @@ const MAJOR_SUGGESTIONS: Record<string, string[]> = {
   "leading+anywhere": ["International Business", "Political Science", "Law"],
 };
 
-function getMajorSuggestions(answers: Record<string, string>): string[] {
+const ACTIVITY_PHRASE: Record<string, string> = {
+  building: "you love building and fixing things",
+  helping: "you're driven to help people",
+  analyzing: "you enjoy analyzing data and spotting patterns",
+  creating: "you light up when creating art and stories",
+  leading: "you like running projects and leading people",
+};
+const ENVIRONMENT_PHRASE: Record<string, string> = {
+  lab: "you'd thrive in a lab or research setting",
+  field: "you want to be out in the field and community",
+  desk: "you prefer focused work at a computer",
+  clinic: "you picture yourself in a hospital or clinic",
+  anywhere: "you want the freedom to work anywhere",
+};
+const STRENGTH_PHRASE: Record<string, string> = {
+  math: "your strength in math and logic",
+  writing: "your talent for writing and communication",
+  empathy: "your empathy and listening skills",
+  design: "your creativity and eye for design",
+  planning: "your knack for organization and planning",
+};
+const IMPACT_PHRASE: Record<string, string> = {
+  science: "advancing science and technology",
+  health: "improving people's health",
+  policy: "shaping laws and policy",
+  economy: "growing the economy",
+  art: "inspiring people through art and media",
+};
+const SUBJECT_PHRASE: Record<string, string> = {
+  science: "your enjoyment of science classes",
+  math: "your love of math",
+  english: "your enjoyment of English and literature",
+  history: "your interest in history and social studies",
+  art: "your passion for art, music, and theater",
+};
+
+function getMajorSuggestions(answers: Record<string, string>): MajorSuggestion[] {
   const key = `${answers.activity}+${answers.environment}`;
-  if (MAJOR_SUGGESTIONS[key]) return MAJOR_SUGGESTIONS[key];
-  // Fallback by activity alone
   const activityMap: Record<string, string[]> = {
     building: ["Engineering", "Computer Science", "Architecture"],
     helping: ["Nursing", "Psychology", "Social Work"],
@@ -218,10 +252,28 @@ function getMajorSuggestions(answers: Record<string, string>): string[] {
     creating: ["Graphic Design", "Communications", "Film Studies"],
     leading: ["Business Administration", "Marketing", "Political Science"],
   };
-  return activityMap[answers.activity] || ["Business Administration", "Computer Science", "Psychology"];
+  const majors = MAJOR_SUGGESTIONS[key]
+    || activityMap[answers.activity]
+    || ["Business Administration", "Computer Science", "Psychology"];
+
+  const a = ACTIVITY_PHRASE[answers.activity] ?? "your interests";
+  const e = ENVIRONMENT_PHRASE[answers.environment] ?? "your ideal work setting";
+  const s = STRENGTH_PHRASE[answers.strength] ?? "your strengths";
+  const im = IMPACT_PHRASE[answers.impact] ?? "the impact you want to make";
+  const su = SUBJECT_PHRASE[answers.subject] ?? "the subjects you enjoy";
+
+  const reasons = [
+    `Because ${a} and ${e}, ${majors[0]} fits closely with how you want to spend your days.`,
+    `With ${s} and ${su}, ${majors[1]} plays right to what you're naturally good at.`,
+    `Since you care about ${im}, ${majors[2]} gives you a strong path to get there.`,
+  ];
+
+  return majors.map((major, i) => ({ major, reason: reasons[i] ?? "" }));
 }
 
-function InterestQuiz({ onComplete }: { onComplete: (majors: string[]) => void }) {
+interface MajorSuggestion { major: string; reason: string; }
+
+function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) => void }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<string>("");
@@ -314,25 +366,28 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: string[]) => void }
 }
 
 // ─── Quiz Results splash ──────────────────────────────────────────────
-function QuizResults({ majors, onExplore, onDismiss }: { majors: string[]; onExplore: (major: string) => void; onDismiss: () => void }) {
+function QuizResults({ majors, onExplore, onDismiss }: { majors: MajorSuggestion[]; onExplore: (major: string) => void; onDismiss: () => void }) {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg text-center">
         <div className="text-5xl mb-5">🎉</div>
         <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-3">Your top matches!</h1>
-        <p className="text-slate-500 mb-8">Based on your interests, here are the majors we think you'll love. Click one to explore it.</p>
+        <p className="text-slate-500 mb-8">Based on your interests, here are the majors we think you'll love — and why. Click one to explore it.</p>
         <div className="space-y-3 mb-8">
-          {majors.map((major, i) => (
+          {majors.map((item, i) => (
             <button
-              key={major}
-              onClick={() => onExplore(major)}
-              className="w-full flex items-center gap-4 bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-slate-400 hover:shadow-md transition-all group"
+              key={item.major}
+              onClick={() => onExplore(item.major)}
+              className="w-full flex items-start gap-4 bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-slate-400 hover:shadow-md transition-all group"
             >
               <span className="w-10 h-10 rounded-xl bg-slate-900 text-white font-serif font-bold text-lg flex items-center justify-center flex-shrink-0">
                 {i + 1}
               </span>
-              <span className="flex-1 font-serif font-bold text-slate-900 text-lg">{major}</span>
-              <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-700 transition-colors" />
+              <span className="flex-1 min-w-0">
+                <span className="block font-serif font-bold text-slate-900 text-lg">{item.major}</span>
+                {item.reason && <span className="block text-sm text-slate-500 mt-1 leading-relaxed">{item.reason}</span>}
+              </span>
+              <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-700 transition-colors flex-shrink-0 mt-2.5" />
             </button>
           ))}
         </div>
@@ -1050,7 +1105,7 @@ function UserMenu() {
 
 // ─── Suggested Majors View ────────────────────────────────────────────
 function SuggestedView({ results, onExplore, onRetake }: {
-  results: string[];
+  results: MajorSuggestion[];
   onExplore: (major: string) => void;
   onRetake: () => void;
 }) {
@@ -1082,17 +1137,20 @@ function SuggestedView({ results, onExplore, onRetake }: {
         </button>
       </div>
       <div className="space-y-3">
-        {results.map((major, i) => (
+        {results.map((item, i) => (
           <button
-            key={major}
-            onClick={() => onExplore(major)}
-            className="w-full flex items-center gap-4 bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-slate-400 hover:shadow-md transition-all group"
+            key={item.major}
+            onClick={() => onExplore(item.major)}
+            className="w-full flex items-start gap-4 bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-slate-400 hover:shadow-md transition-all group"
           >
             <span className="w-10 h-10 rounded-xl bg-slate-900 text-white font-bold text-lg flex items-center justify-center flex-shrink-0 font-sans">
               {i + 1}
             </span>
-            <span className="flex-1 font-bold text-slate-900 text-lg">{major}</span>
-            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-700 transition-colors" />
+            <span className="flex-1 min-w-0">
+              <span className="block font-bold text-slate-900 text-lg">{item.major}</span>
+              {item.reason && <span className="block text-sm text-slate-500 mt-1 leading-relaxed">{item.reason}</span>}
+            </span>
+            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-700 transition-colors flex-shrink-0 mt-2.5" />
           </button>
         ))}
       </div>
@@ -1110,9 +1168,18 @@ function AppShell() {
   const [quizState, setQuizState] = useState<"quiz" | "results" | "done">(() =>
     localStorage.getItem(QUIZ_DONE_KEY) ? "done" : "quiz"
   );
-  const [quizResults, setQuizResults] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem(QUIZ_RESULTS_KEY) ?? "[]") ?? []; }
-    catch { return []; }
+  const [quizResults, setQuizResults] = useState<MajorSuggestion[]>(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(QUIZ_RESULTS_KEY) ?? "[]");
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .filter((r: unknown) => typeof r === "string" || (!!r && typeof (r as MajorSuggestion).major === "string"))
+        .map((r: unknown): MajorSuggestion =>
+          typeof r === "string"
+            ? { major: r, reason: "" }
+            : { major: (r as MajorSuggestion).major, reason: String((r as MajorSuggestion).reason ?? "") }
+        );
+    } catch { return []; }
   });
   const [exploreInitialMajor, setExploreInitialMajor] = useState<string | undefined>();
 
@@ -1138,7 +1205,7 @@ function AppShell() {
     setMyColleges(updated); persistMyColleges(updated);
   };
 
-  const handleQuizComplete = (majors: string[]) => {
+  const handleQuizComplete = (majors: MajorSuggestion[]) => {
     setQuizResults(majors);
     localStorage.setItem(QUIZ_RESULTS_KEY, JSON.stringify(majors));
     setQuizState("results");

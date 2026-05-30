@@ -450,83 +450,116 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
   ],
 ];
 
-const MAJOR_SUGGESTIONS: Record<string, string[]> = {
-  "building+lab": ["Mechanical Engineering", "Electrical Engineering", "Chemical Engineering"],
-  "building+desk": ["Computer Science", "Software Engineering", "Information Technology"],
-  "building+field": ["Civil Engineering", "Architecture", "Environmental Engineering"],
-  "helping+clinic": ["Nursing", "Pre-Medicine", "Physical Therapy"],
-  "helping+field": ["Social Work", "Public Health", "Education"],
-  "helping+desk": ["Psychology", "Human Resources", "Counseling"],
-  "analyzing+desk": ["Data Science", "Finance", "Economics"],
-  "analyzing+lab": ["Biochemistry", "Statistics", "Neuroscience"],
-  "creating+anywhere": ["Graphic Design", "Film Studies", "Creative Writing"],
-  "creating+desk": ["UX Design", "Digital Media", "Communications"],
-  "leading+desk": ["Business Administration", "Marketing", "Entrepreneurship"],
-  "leading+anywhere": ["International Business", "Political Science", "Law"],
+// ─── Major recommender ────────────────────────────────────────────────
+// Every major is tagged with the answer `value`s it aligns with across all
+// five quiz dimensions. We score each major against the user's actual
+// selections so recommendations reflect everything they picked — not just
+// one or two answers.
+interface MajorProfile {
+  name: string;
+  activity: string[];
+  environment: string[];
+  strength: string[];
+  impact: string[];
+  subject: string[];
+}
+
+const MAJOR_CATALOG: MajorProfile[] = [
+  { name: "Mechanical Engineering", activity: ["building"], environment: ["lab", "field"], strength: ["math"], impact: ["science"], subject: ["science", "math"] },
+  { name: "Electrical Engineering", activity: ["building"], environment: ["lab", "desk"], strength: ["math"], impact: ["science"], subject: ["math", "science"] },
+  { name: "Chemical Engineering", activity: ["building", "analyzing"], environment: ["lab"], strength: ["math"], impact: ["science", "health"], subject: ["science"] },
+  { name: "Computer Science", activity: ["building", "analyzing"], environment: ["desk"], strength: ["math"], impact: ["science", "economy"], subject: ["math", "science"] },
+  { name: "Software Engineering", activity: ["building"], environment: ["desk"], strength: ["math", "planning"], impact: ["science", "economy"], subject: ["math"] },
+  { name: "Information Technology", activity: ["building"], environment: ["desk"], strength: ["planning", "math"], impact: ["economy"], subject: ["math"] },
+  { name: "Civil Engineering", activity: ["building"], environment: ["field"], strength: ["math", "planning"], impact: ["science"], subject: ["math", "science"] },
+  { name: "Architecture", activity: ["building", "creating"], environment: ["field", "desk"], strength: ["design", "math"], impact: ["art", "science"], subject: ["art", "math"] },
+  { name: "Environmental Engineering", activity: ["building", "analyzing"], environment: ["field", "lab"], strength: ["math"], impact: ["science", "health"], subject: ["science"] },
+  { name: "Nursing", activity: ["helping"], environment: ["clinic"], strength: ["empathy"], impact: ["health"], subject: ["science"] },
+  { name: "Pre-Medicine", activity: ["helping", "analyzing"], environment: ["clinic", "lab"], strength: ["empathy", "math"], impact: ["health", "science"], subject: ["science"] },
+  { name: "Physical Therapy", activity: ["helping"], environment: ["clinic"], strength: ["empathy"], impact: ["health"], subject: ["science"] },
+  { name: "Social Work", activity: ["helping"], environment: ["field"], strength: ["empathy"], impact: ["policy", "health"], subject: ["history"] },
+  { name: "Public Health", activity: ["helping", "analyzing"], environment: ["field", "desk"], strength: ["empathy", "planning"], impact: ["health", "policy"], subject: ["science"] },
+  { name: "Education", activity: ["helping"], environment: ["field"], strength: ["empathy", "writing"], impact: ["policy"], subject: ["english", "history"] },
+  { name: "Psychology", activity: ["helping", "analyzing"], environment: ["desk", "clinic"], strength: ["empathy"], impact: ["health"], subject: ["science"] },
+  { name: "Human Resources", activity: ["helping", "leading"], environment: ["desk"], strength: ["empathy", "planning"], impact: ["economy"], subject: ["history"] },
+  { name: "Counseling", activity: ["helping"], environment: ["desk", "clinic"], strength: ["empathy"], impact: ["health"], subject: ["english"] },
+  { name: "Data Science", activity: ["analyzing"], environment: ["desk"], strength: ["math"], impact: ["science", "economy"], subject: ["math"] },
+  { name: "Finance", activity: ["analyzing", "leading"], environment: ["desk"], strength: ["math", "planning"], impact: ["economy"], subject: ["math"] },
+  { name: "Economics", activity: ["analyzing"], environment: ["desk"], strength: ["math"], impact: ["economy", "policy"], subject: ["math", "history"] },
+  { name: "Biochemistry", activity: ["analyzing"], environment: ["lab"], strength: ["math"], impact: ["science", "health"], subject: ["science"] },
+  { name: "Statistics", activity: ["analyzing"], environment: ["desk"], strength: ["math"], impact: ["science", "economy"], subject: ["math"] },
+  { name: "Neuroscience", activity: ["analyzing"], environment: ["lab"], strength: ["math", "empathy"], impact: ["science", "health"], subject: ["science"] },
+  { name: "Graphic Design", activity: ["creating"], environment: ["desk", "anywhere"], strength: ["design"], impact: ["art"], subject: ["art"] },
+  { name: "Film Studies", activity: ["creating"], environment: ["anywhere"], strength: ["design", "writing"], impact: ["art"], subject: ["art", "english"] },
+  { name: "Creative Writing", activity: ["creating"], environment: ["anywhere", "desk"], strength: ["writing"], impact: ["art"], subject: ["english"] },
+  { name: "UX Design", activity: ["creating", "analyzing"], environment: ["desk"], strength: ["design"], impact: ["art", "economy"], subject: ["art"] },
+  { name: "Digital Media", activity: ["creating"], environment: ["desk", "anywhere"], strength: ["design", "writing"], impact: ["art"], subject: ["art"] },
+  { name: "Communications", activity: ["creating", "leading"], environment: ["desk", "anywhere"], strength: ["writing"], impact: ["art", "policy"], subject: ["english"] },
+  { name: "Business Administration", activity: ["leading"], environment: ["desk"], strength: ["planning"], impact: ["economy"], subject: ["math", "history"] },
+  { name: "Marketing", activity: ["leading", "creating"], environment: ["desk"], strength: ["planning", "design", "writing"], impact: ["economy"], subject: ["english"] },
+  { name: "Entrepreneurship", activity: ["leading", "building"], environment: ["anywhere", "desk"], strength: ["planning"], impact: ["economy"], subject: ["math"] },
+  { name: "International Business", activity: ["leading"], environment: ["anywhere"], strength: ["planning"], impact: ["economy", "policy"], subject: ["history"] },
+  { name: "Political Science", activity: ["leading", "analyzing"], environment: ["anywhere", "desk"], strength: ["writing", "planning"], impact: ["policy"], subject: ["history"] },
+  { name: "Law", activity: ["leading", "analyzing"], environment: ["desk"], strength: ["writing"], impact: ["policy"], subject: ["history", "english"] },
+];
+
+// Concise phrases describing each selection, used to explain matches.
+const SEL_ACTIVITY: Record<string, string> = {
+  building: "building and fixing things", helping: "helping people", analyzing: "analyzing data and patterns", creating: "creating and designing", leading: "leading projects",
+};
+const SEL_ENVIRONMENT: Record<string, string> = {
+  lab: "working in a lab", field: "being out in the field", desk: "focused desk work", clinic: "working in a clinic", anywhere: "the freedom to work anywhere",
+};
+const SEL_STRENGTH: Record<string, string> = {
+  math: "your math and logic skills", writing: "your writing ability", empathy: "your empathy", design: "your eye for design", planning: "your organization skills",
+};
+const SEL_IMPACT: Record<string, string> = {
+  science: "advancing science", health: "improving health", policy: "shaping policy", economy: "growing the economy", art: "inspiring through art",
+};
+const SEL_SUBJECT: Record<string, string> = {
+  science: "your love of science", math: "your love of math", english: "your love of English", history: "your love of history", art: "your love of art",
 };
 
-const ACTIVITY_PHRASE: Record<string, string> = {
-  building: "you love building and fixing things",
-  helping: "you're driven to help people",
-  analyzing: "you enjoy analyzing data and spotting patterns",
-  creating: "you light up when creating art and stories",
-  leading: "you like running projects and leading people",
-};
-const ENVIRONMENT_PHRASE: Record<string, string> = {
-  lab: "you'd thrive in a lab or research setting",
-  field: "you want to be out in the field and community",
-  desk: "you prefer focused work at a computer",
-  clinic: "you picture yourself in a hospital or clinic",
-  anywhere: "you want the freedom to work anywhere",
-};
-const STRENGTH_PHRASE: Record<string, string> = {
-  math: "your strength in math and logic",
-  writing: "your talent for writing and communication",
-  empathy: "your empathy and listening skills",
-  design: "your creativity and eye for design",
-  planning: "your knack for organization and planning",
-};
-const IMPACT_PHRASE: Record<string, string> = {
-  science: "advancing science and technology",
-  health: "improving people's health",
-  policy: "shaping laws and policy",
-  economy: "growing the economy",
-  art: "inspiring people through art and media",
-};
-const SUBJECT_PHRASE: Record<string, string> = {
-  science: "your enjoyment of science classes",
-  math: "your love of math",
-  english: "your enjoyment of English and literature",
-  history: "your interest in history and social studies",
-  art: "your passion for art, music, and theater",
-};
+// Each dimension contributes to the score; activity weighted highest.
+const DIMENSIONS: { key: keyof Omit<MajorProfile, "name">; weight: number; labels: Record<string, string> }[] = [
+  { key: "activity", weight: 3, labels: SEL_ACTIVITY },
+  { key: "environment", weight: 2, labels: SEL_ENVIRONMENT },
+  { key: "strength", weight: 2, labels: SEL_STRENGTH },
+  { key: "impact", weight: 2, labels: SEL_IMPACT },
+  { key: "subject", weight: 2, labels: SEL_SUBJECT },
+];
+
+function joinList(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
 
 function getMajorSuggestions(answers: Record<string, string>): MajorSuggestion[] {
-  const key = `${answers.activity}+${answers.environment}`;
-  const activityMap: Record<string, string[]> = {
-    building: ["Engineering", "Computer Science", "Architecture"],
-    helping: ["Nursing", "Psychology", "Social Work"],
-    analyzing: ["Data Science", "Finance", "Economics"],
-    creating: ["Graphic Design", "Communications", "Film Studies"],
-    leading: ["Business Administration", "Marketing", "Political Science"],
-  };
-  const majors = MAJOR_SUGGESTIONS[key]
-    || activityMap[answers.activity]
-    || ["Business Administration", "Computer Science", "Psychology"];
+  const scored = MAJOR_CATALOG.map((major) => {
+    let score = 0;
+    const matched: string[] = [];
+    for (const dim of DIMENSIONS) {
+      const answer = answers[dim.key];
+      if (answer && major[dim.key].includes(answer)) {
+        score += dim.weight;
+        const phrase = dim.labels[answer];
+        if (phrase) matched.push(phrase);
+      }
+    }
+    return { major, score, matched };
+  });
 
-  const a = ACTIVITY_PHRASE[answers.activity] ?? "your interests";
-  const e = ENVIRONMENT_PHRASE[answers.environment] ?? "your ideal work setting";
-  const s = STRENGTH_PHRASE[answers.strength] ?? "your strengths";
-  const im = IMPACT_PHRASE[answers.impact] ?? "the impact you want to make";
-  const su = SUBJECT_PHRASE[answers.subject] ?? "the subjects you enjoy";
+  // Highest score first; preserve catalog order for ties (stable sort).
+  scored.sort((a, b) => b.score - a.score);
 
-  const reasons = [
-    `Because ${a} and ${e}, ${majors[0]} fits closely with how you want to spend your days.`,
-    `With ${s} and ${su}, ${majors[1]} plays right to what you're naturally good at.`,
-    `Since you care about ${im}, ${majors[2]} gives you a strong path to get there.`,
-  ];
-
-  return majors.map((major, i) => ({ major, reason: reasons[i] ?? "" }));
+  return scored.slice(0, 3).map(({ major, matched }) => {
+    const top = matched.slice(0, 3);
+    const reason = top.length > 0
+      ? `Matches ${joinList(top)} from your answers.`
+      : "A well-rounded option based on your overall answers.";
+    return { major: major.name, reason };
+  });
 }
 
 interface MajorSuggestion { major: string; reason: string; }

@@ -129,67 +129,325 @@ interface QuizQuestion {
   options: { label: string; value: string }[];
 }
 
-const QUIZ_QUESTIONS: QuizQuestion[] = [
-  {
-    id: "activity",
-    question: "Which activity sounds most exciting to you?",
-    emoji: "🎯",
-    options: [
-      { label: "Building or fixing things", value: "building" },
-      { label: "Helping people feel better", value: "helping" },
-      { label: "Analyzing data and patterns", value: "analyzing" },
-      { label: "Creating art or stories", value: "creating" },
-      { label: "Running a business or project", value: "leading" },
-    ],
-  },
-  {
-    id: "environment",
-    question: "Where would you love to work?",
-    emoji: "🏢",
-    options: [
-      { label: "In a lab or research facility", value: "lab" },
-      { label: "Out in the field or community", value: "field" },
-      { label: "At a computer or desk", value: "desk" },
-      { label: "In a hospital or clinic", value: "clinic" },
-      { label: "Anywhere — I want to travel", value: "anywhere" },
-    ],
-  },
-  {
-    id: "strength",
-    question: "What's your biggest strength?",
-    emoji: "💪",
-    options: [
-      { label: "Math and logic", value: "math" },
-      { label: "Writing and communication", value: "writing" },
-      { label: "Empathy and listening", value: "empathy" },
-      { label: "Creativity and design", value: "design" },
-      { label: "Organization and planning", value: "planning" },
-    ],
-  },
-  {
-    id: "impact",
-    question: "What kind of impact do you want to make?",
-    emoji: "🌍",
-    options: [
-      { label: "Advance science or technology", value: "science" },
-      { label: "Improve people's health", value: "health" },
-      { label: "Shape laws and policies", value: "policy" },
-      { label: "Grow the economy", value: "economy" },
-      { label: "Inspire through art or media", value: "art" },
-    ],
-  },
-  {
-    id: "subject",
-    question: "Which school subject did you enjoy most?",
-    emoji: "📚",
-    options: [
-      { label: "Science (Bio, Chem, Physics)", value: "science" },
-      { label: "Math", value: "math" },
-      { label: "English or Literature", value: "english" },
-      { label: "History or Social Studies", value: "history" },
-      { label: "Art, Music, or Theater", value: "art" },
-    ],
-  },
+// Five indirect, scenario-based quiz versions. Each version asks about the same
+// five dimensions (activity, environment, strength, impact, subject) using the
+// same answer `value`s, so getMajorSuggestions works identically across them.
+const QUIZ_VERSIONS: QuizQuestion[][] = [
+  // ── Version 1 · "A day in your life" ──────────────────────────────────
+  [
+    {
+      id: "activity",
+      question: "You finally have a free weekend. What are you itching to do?",
+      emoji: "🌅",
+      options: [
+        { label: "Take something apart to see how it works", value: "building" },
+        { label: "Show up for a friend who needs me", value: "helping" },
+        { label: "Get lost in a puzzle or strategy game", value: "analyzing" },
+        { label: "Write, paint, film, or design something", value: "creating" },
+        { label: "Plan an event or start a side hustle", value: "leading" },
+      ],
+    },
+    {
+      id: "environment",
+      question: "Picture the space where you feel most 'in the zone.'",
+      emoji: "🪟",
+      options: [
+        { label: "A quiet lab surrounded by experiments", value: "lab" },
+        { label: "Outdoors, moving between people and places", value: "field" },
+        { label: "A cozy desk with my screens and headphones", value: "desk" },
+        { label: "A busy clinic helping people one-on-one", value: "clinic" },
+        { label: "A new city every few months — no fixed desk", value: "anywhere" },
+      ],
+    },
+    {
+      id: "strength",
+      question: "Your friends always come to you for…?",
+      emoji: "🤝",
+      options: [
+        { label: "Cracking a tricky logic or numbers problem", value: "math" },
+        { label: "Putting their messy thoughts into words", value: "writing" },
+        { label: "A listening ear and honest advice", value: "empathy" },
+        { label: "Making something look amazing", value: "design" },
+        { label: "Getting them organized and on track", value: "planning" },
+      ],
+    },
+    {
+      id: "impact",
+      question: "In 20 years, you'd be proudest if you had…?",
+      emoji: "🏆",
+      options: [
+        { label: "Invented something that pushes tech forward", value: "science" },
+        { label: "Helped thousands live healthier lives", value: "health" },
+        { label: "Changed a law that makes life fairer", value: "policy" },
+        { label: "Built a business that created jobs", value: "economy" },
+        { label: "Moved people with a story or work of art", value: "art" },
+      ],
+    },
+    {
+      id: "subject",
+      question: "Which class never really felt like work?",
+      emoji: "📖",
+      options: [
+        { label: "Science labs (Bio, Chem, Physics)", value: "science" },
+        { label: "Math problem sets", value: "math" },
+        { label: "English and literature discussions", value: "english" },
+        { label: "History and social studies debates", value: "history" },
+        { label: "Art, music, or theater", value: "art" },
+      ],
+    },
+  ],
+  // ── Version 2 · "Startup roleplay" ────────────────────────────────────
+  [
+    {
+      id: "activity",
+      question: "You join a scrappy startup. Which role do you grab first?",
+      emoji: "🚀",
+      options: [
+        { label: "The one who builds the actual product", value: "building" },
+        { label: "The one who supports the team and customers", value: "helping" },
+        { label: "The one who reads the data and finds insights", value: "analyzing" },
+        { label: "The one who shapes the brand and content", value: "creating" },
+        { label: "The one who sets the vision and runs it", value: "leading" },
+      ],
+    },
+    {
+      id: "environment",
+      question: "On the office tour, which room makes you go 'yes, this one'?",
+      emoji: "🚪",
+      options: [
+        { label: "The research lab full of equipment", value: "lab" },
+        { label: "There's no office — you're always on site", value: "field" },
+        { label: "The quiet focus pods with big monitors", value: "desk" },
+        { label: "The care rooms where people get helped", value: "clinic" },
+        { label: "The airport lounge — you work while traveling", value: "anywhere" },
+      ],
+    },
+    {
+      id: "strength",
+      question: "A group project is falling apart. What do you bring?",
+      emoji: "🧩",
+      options: [
+        { label: "Logic to crack the hard technical part", value: "math" },
+        { label: "Clear writing to pull it all together", value: "writing" },
+        { label: "Calm to keep everyone getting along", value: "empathy" },
+        { label: "A creative spark to make it stand out", value: "design" },
+        { label: "A plan and timeline to save it", value: "planning" },
+      ],
+    },
+    {
+      id: "impact",
+      question: "A genie grants one change to the world. You pick…?",
+      emoji: "🧞",
+      options: [
+        { label: "Faster scientific breakthroughs", value: "science" },
+        { label: "Healthier people everywhere", value: "health" },
+        { label: "Fairer laws and systems", value: "policy" },
+        { label: "Opportunity and jobs for all", value: "economy" },
+        { label: "More beauty, stories, and culture", value: "art" },
+      ],
+    },
+    {
+      id: "subject",
+      question: "Flipping through old report cards, your eyes light up at…?",
+      emoji: "🗂️",
+      options: [
+        { label: "Science", value: "science" },
+        { label: "Math", value: "math" },
+        { label: "English / Literature", value: "english" },
+        { label: "History / Social Studies", value: "history" },
+        { label: "Art, Music, or Theater", value: "art" },
+      ],
+    },
+  ],
+  // ── Version 3 · "Media & vibes" ───────────────────────────────────────
+  [
+    {
+      id: "activity",
+      question: "What kind of video rabbit hole do you fall into?",
+      emoji: "📺",
+      options: [
+        { label: "How things are made / engineering builds", value: "building" },
+        { label: "Heartwarming stories and self-improvement", value: "helping" },
+        { label: "Deep-dive explainers and breakdowns", value: "analyzing" },
+        { label: "Art, film-making, and creative tutorials", value: "creating" },
+        { label: "Business, startups, and success stories", value: "leading" },
+      ],
+    },
+    {
+      id: "environment",
+      question: "Your ideal commute ends at…?",
+      emoji: "🚇",
+      options: [
+        { label: "A lab with your name on a project", value: "lab" },
+        { label: "Wherever the work takes you that day", value: "field" },
+        { label: "A calm room with your setup dialed in", value: "desk" },
+        { label: "A place where people are waiting for your help", value: "clinic" },
+        { label: "A different time zone — you work remote", value: "anywhere" },
+      ],
+    },
+    {
+      id: "strength",
+      question: "Pick the 'superpower' that already feels kind of real for you:",
+      emoji: "⚡",
+      options: [
+        { label: "Solving any number or logic puzzle", value: "math" },
+        { label: "Saying exactly the right thing", value: "writing" },
+        { label: "Sensing how someone really feels", value: "empathy" },
+        { label: "Seeing the beauty in everything", value: "design" },
+        { label: "Turning chaos into a clean plan", value: "planning" },
+      ],
+    },
+    {
+      id: "impact",
+      question: "Which headline would you most want to be about you?",
+      emoji: "📰",
+      options: [
+        { label: "'Breakthrough discovery changes the field'", value: "science" },
+        { label: "'New approach saves countless lives'", value: "health" },
+        { label: "'Landmark law passes after years of work'", value: "policy" },
+        { label: "'Company hits milestone, hiring thousands'", value: "economy" },
+        { label: "'Debut work captivates audiences everywhere'", value: "art" },
+      ],
+    },
+    {
+      id: "subject",
+      question: "Which homework did you secretly enjoy?",
+      emoji: "✏️",
+      options: [
+        { label: "Science labs and reports", value: "science" },
+        { label: "Math problem sets", value: "math" },
+        { label: "Essays and reading", value: "english" },
+        { label: "History projects", value: "history" },
+        { label: "Studio or performance work", value: "art" },
+      ],
+    },
+  ],
+  // ── Version 4 · "Desert island" ───────────────────────────────────────
+  [
+    {
+      id: "activity",
+      question: "Stranded on an island with a group — what's your job?",
+      emoji: "🏝️",
+      options: [
+        { label: "Build the shelter and tools", value: "building" },
+        { label: "Keep everyone's spirits and health up", value: "helping" },
+        { label: "Map the island and ration resources", value: "analyzing" },
+        { label: "Document the journey and keep morale high", value: "creating" },
+        { label: "Take charge and coordinate everyone", value: "leading" },
+      ],
+    },
+    {
+      id: "environment",
+      question: "Where do you do your best thinking?",
+      emoji: "💭",
+      options: [
+        { label: "Somewhere precise and controlled", value: "lab" },
+        { label: "Out in the real world, hands-on", value: "field" },
+        { label: "Alone with my screen and zero distractions", value: "desk" },
+        { label: "Around people who need me", value: "clinic" },
+        { label: "On the move — trains, planes, cafes", value: "anywhere" },
+      ],
+    },
+    {
+      id: "strength",
+      question: "What's the compliment you get most often?",
+      emoji: "💬",
+      options: [
+        { label: "'You're so logical'", value: "math" },
+        { label: "'You explain things really well'", value: "writing" },
+        { label: "'You really get me'", value: "empathy" },
+        { label: "'You have great taste'", value: "design" },
+        { label: "'You're so organized'", value: "planning" },
+      ],
+    },
+    {
+      id: "impact",
+      question: "What problem keeps you up at night wanting to fix it?",
+      emoji: "🌙",
+      options: [
+        { label: "Unsolved science and tech challenges", value: "science" },
+        { label: "People suffering from illness", value: "health" },
+        { label: "Unfair rules and broken systems", value: "policy" },
+        { label: "Lack of jobs and opportunity", value: "economy" },
+        { label: "A world that needs more beauty and stories", value: "art" },
+      ],
+    },
+    {
+      id: "subject",
+      question: "If school had only one subject forever, you'd pick…?",
+      emoji: "🎓",
+      options: [
+        { label: "Science", value: "science" },
+        { label: "Math", value: "math" },
+        { label: "English / Literature", value: "english" },
+        { label: "History / Social Studies", value: "history" },
+        { label: "Art / Music / Theater", value: "art" },
+      ],
+    },
+  ],
+  // ── Version 5 · "Your phone & browser tabs" ───────────────────────────
+  [
+    {
+      id: "activity",
+      question: "Your phone's most-used app is probably…?",
+      emoji: "📱",
+      options: [
+        { label: "A tinkering, DIY, or coding app", value: "building" },
+        { label: "Messaging — I'm always checking on people", value: "helping" },
+        { label: "A stats, finance, or strategy app", value: "analyzing" },
+        { label: "A photo, video, or design app", value: "creating" },
+        { label: "A productivity or business app", value: "leading" },
+      ],
+    },
+    {
+      id: "environment",
+      question: "A dream job listing pops up. Which location line sells you?",
+      emoji: "🧭",
+      options: [
+        { label: "'On-site research laboratory'", value: "lab" },
+        { label: "'Fieldwork / travel required'", value: "field" },
+        { label: "'Remote, deep-focus role'", value: "desk" },
+        { label: "'Hospital / clinical setting'", value: "clinic" },
+        { label: "'Work from anywhere in the world'", value: "anywhere" },
+      ],
+    },
+    {
+      id: "strength",
+      question: "You've got 50 browser tabs open. Most are about…?",
+      emoji: "🗂️",
+      options: [
+        { label: "Puzzles, data, and how things work", value: "math" },
+        { label: "Articles, blogs, and things to read", value: "writing" },
+        { label: "Advice, relationships, and people", value: "empathy" },
+        { label: "Design inspiration and aesthetics", value: "design" },
+        { label: "To-do systems and planners", value: "planning" },
+      ],
+    },
+    {
+      id: "impact",
+      question: "You're given a TED talk. Your topic is…?",
+      emoji: "🎤",
+      options: [
+        { label: "The next big scientific frontier", value: "science" },
+        { label: "How we can all live healthier", value: "health" },
+        { label: "Fixing a broken system", value: "policy" },
+        { label: "Building businesses that lift people up", value: "economy" },
+        { label: "Why stories and art matter", value: "art" },
+      ],
+    },
+    {
+      id: "subject",
+      question: "Which textbook would you actually keep?",
+      emoji: "📚",
+      options: [
+        { label: "Science", value: "science" },
+        { label: "Math", value: "math" },
+        { label: "English / Literature", value: "english" },
+        { label: "History / Social Studies", value: "history" },
+        { label: "Art / Music / Theater", value: "art" },
+      ],
+    },
+  ],
 ];
 
 const MAJOR_SUGGESTIONS: Record<string, string[]> = {
@@ -274,13 +532,16 @@ function getMajorSuggestions(answers: Record<string, string>): MajorSuggestion[]
 interface MajorSuggestion { major: string; reason: string; }
 
 function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) => void }) {
+  const [questions] = useState<QuizQuestion[]>(
+    () => QUIZ_VERSIONS[Math.floor(Math.random() * QUIZ_VERSIONS.length)]
+  );
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<string>("");
 
-  const question = QUIZ_QUESTIONS[step];
-  const isLast = step === QUIZ_QUESTIONS.length - 1;
-  const progress = ((step) / QUIZ_QUESTIONS.length) * 100;
+  const question = questions[step];
+  const isLast = step === questions.length - 1;
+  const progress = ((step) / questions.length) * 100;
 
   const handleNext = () => {
     if (!selected) return;
@@ -297,7 +558,7 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
   const handleBack = () => {
     if (step === 0) return;
     setStep((s) => s - 1);
-    setSelected(answers[QUIZ_QUESTIONS[step - 1].id] || "");
+    setSelected(answers[questions[step - 1].id] || "");
   };
 
   return (
@@ -307,7 +568,7 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 bg-slate-900 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
             <Sparkles className="w-3.5 h-3.5" />
-            Quick Quiz · {QUIZ_QUESTIONS.length} questions
+            Quick Quiz · {questions.length} questions
           </div>
           <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-3">Find your perfect major</h1>
           <p className="text-slate-500">Answer a few quick questions and we'll suggest majors that match your interests.</p>
@@ -351,7 +612,7 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
           >
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
-          <span className="text-sm text-slate-400 font-medium">{step + 1} / {QUIZ_QUESTIONS.length}</span>
+          <span className="text-sm text-slate-400 font-medium">{step + 1} / {questions.length}</span>
           <button
             onClick={handleNext}
             disabled={!selected}

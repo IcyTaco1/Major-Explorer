@@ -1253,7 +1253,7 @@ function LandingPage() {
           <Sparkles className="w-3.5 h-3.5" />
           AI-powered college major explorer
         </div>
-        <h1 className="text-5xl md:text-7xl font-serif font-bold text-slate-900 mb-6 leading-tight max-w-3xl">
+        <h1 className="text-5xl md:text-7xl font-display font-extrabold text-slate-900 mb-6 leading-none max-w-3xl tracking-tight">
           Find the major that's right for you.
         </h1>
         <p className="text-xl text-slate-500 max-w-xl mb-10 leading-relaxed">
@@ -1276,7 +1276,7 @@ function LandingPage() {
           ].map(({ emoji, title, desc }) => (
             <div key={title} className="bg-white rounded-2xl border border-slate-200 p-6 text-left shadow-sm">
               <div className="text-3xl mb-3">{emoji}</div>
-              <h3 className="font-serif font-bold text-slate-900 text-lg mb-2">{title}</h3>
+              <h3 className="font-display font-bold text-slate-900 text-lg mb-2">{title}</h3>
               <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
             </div>
           ))}

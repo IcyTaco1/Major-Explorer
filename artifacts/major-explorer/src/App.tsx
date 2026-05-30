@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
+import { publishableKeyFromHost } from "@clerk/react/internal";
+import { shadcn } from "@clerk/themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useLookupMajor, useGetMajorCurriculum, useChat } from "@workspace/api-client-react";
@@ -8,10 +11,75 @@ import type { College, CurriculumResponse, ChatMessage } from "@workspace/api-cl
 import {
   Search, GraduationCap, MapPin, Milestone, AlertCircle, X,
   ChevronRight, ChevronDown, ChevronUp, Bookmark, BookmarkCheck,
-  Trash2, SortAsc, MessageCircle, Send, Bot, Check
+  Trash2, SortAsc, MessageCircle, Send, Bot, Check, DollarSign,
+  LogOut, User, ChevronLeft, Sparkles
 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 
+// ─── Clerk setup ──────────────────────────────────────────────────────
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function stripBase(path: string): string {
+  return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path;
+}
+
+if (!clerkPubKey) throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
+
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: "clerk",
+  options: {
+    logoPlacement: "inside" as const,
+    logoLinkUrl: basePath || "/",
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+  },
+  variables: {
+    colorPrimary: "#0f172a",
+    colorForeground: "#0f172a",
+    colorMutedForeground: "#64748b",
+    colorDanger: "#ef4444",
+    colorBackground: "#ffffff",
+    colorInput: "#f8fafc",
+    colorInputForeground: "#0f172a",
+    colorNeutral: "#e2e8f0",
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+    borderRadius: "0.75rem",
+  },
+  elements: {
+    rootBox: "w-full flex justify-center",
+    cardBox: "bg-white rounded-2xl w-[440px] max-w-full overflow-hidden shadow-xl",
+    card: "!shadow-none !border-0 !bg-transparent !rounded-none",
+    footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
+    headerTitle: "text-slate-900 font-serif font-bold",
+    headerSubtitle: "text-slate-500",
+    socialButtonsBlockButtonText: "text-slate-700 font-medium",
+    formFieldLabel: "text-slate-700 font-medium",
+    footerActionLink: "text-slate-900 font-semibold hover:text-slate-700",
+    footerActionText: "text-slate-500",
+    dividerText: "text-slate-400",
+    identityPreviewEditButton: "text-slate-900",
+    formFieldSuccessText: "text-green-600",
+    alertText: "text-slate-700",
+    logoBox: "flex justify-center mb-2",
+    logoImage: "w-10 h-10",
+    socialButtonsBlockButton: "border border-slate-200 hover:bg-slate-50",
+    formButtonPrimary: "bg-slate-900 hover:bg-slate-700 text-white font-semibold",
+    formFieldInput: "bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-800 focus:ring-slate-800",
+    footerAction: "border-t border-slate-100",
+    dividerLine: "bg-slate-200",
+    alert: "bg-red-50 border border-red-100",
+    otpCodeFieldInput: "border-slate-200",
+    formFieldRow: "",
+    main: "",
+  },
+};
+
+// ─── QueryClient ──────────────────────────────────────────────────────
 const queryClient = new QueryClient();
 
 // ─── Types & Storage ─────────────────────────────────────────────────
@@ -31,20 +99,240 @@ interface MyCollege extends College {
 
 const SAVED_KEY = "declare-saved-majors";
 const MY_COLLEGES_KEY = "next-steps-my-colleges";
+const QUIZ_DONE_KEY = "next-steps-quiz-done";
 
 function loadSaved(): SavedData {
   try { return JSON.parse(localStorage.getItem(SAVED_KEY) ?? "{}") ?? {}; }
   catch { return {}; }
 }
-function persistSaved(data: SavedData) {
-  localStorage.setItem(SAVED_KEY, JSON.stringify(data));
-}
+function persistSaved(data: SavedData) { localStorage.setItem(SAVED_KEY, JSON.stringify(data)); }
 function loadMyColleges(): MyCollege[] {
   try { return JSON.parse(localStorage.getItem(MY_COLLEGES_KEY) ?? "[]") ?? []; }
   catch { return []; }
 }
-function persistMyColleges(data: MyCollege[]) {
-  localStorage.setItem(MY_COLLEGES_KEY, JSON.stringify(data));
+function persistMyColleges(data: MyCollege[]) { localStorage.setItem(MY_COLLEGES_KEY, JSON.stringify(data)); }
+
+// ─── Interest Quiz ────────────────────────────────────────────────────
+interface QuizQuestion {
+  id: string;
+  question: string;
+  emoji: string;
+  options: { label: string; value: string }[];
+}
+
+const QUIZ_QUESTIONS: QuizQuestion[] = [
+  {
+    id: "activity",
+    question: "Which activity sounds most exciting to you?",
+    emoji: "🎯",
+    options: [
+      { label: "Building or fixing things", value: "building" },
+      { label: "Helping people feel better", value: "helping" },
+      { label: "Analyzing data and patterns", value: "analyzing" },
+      { label: "Creating art or stories", value: "creating" },
+      { label: "Running a business or project", value: "leading" },
+    ],
+  },
+  {
+    id: "environment",
+    question: "Where would you love to work?",
+    emoji: "🏢",
+    options: [
+      { label: "In a lab or research facility", value: "lab" },
+      { label: "Out in the field or community", value: "field" },
+      { label: "At a computer or desk", value: "desk" },
+      { label: "In a hospital or clinic", value: "clinic" },
+      { label: "Anywhere — I want to travel", value: "anywhere" },
+    ],
+  },
+  {
+    id: "strength",
+    question: "What's your biggest strength?",
+    emoji: "💪",
+    options: [
+      { label: "Math and logic", value: "math" },
+      { label: "Writing and communication", value: "writing" },
+      { label: "Empathy and listening", value: "empathy" },
+      { label: "Creativity and design", value: "design" },
+      { label: "Organization and planning", value: "planning" },
+    ],
+  },
+  {
+    id: "impact",
+    question: "What kind of impact do you want to make?",
+    emoji: "🌍",
+    options: [
+      { label: "Advance science or technology", value: "science" },
+      { label: "Improve people's health", value: "health" },
+      { label: "Shape laws and policies", value: "policy" },
+      { label: "Grow the economy", value: "economy" },
+      { label: "Inspire through art or media", value: "art" },
+    ],
+  },
+  {
+    id: "subject",
+    question: "Which school subject did you enjoy most?",
+    emoji: "📚",
+    options: [
+      { label: "Science (Bio, Chem, Physics)", value: "science" },
+      { label: "Math", value: "math" },
+      { label: "English or Literature", value: "english" },
+      { label: "History or Social Studies", value: "history" },
+      { label: "Art, Music, or Theater", value: "art" },
+    ],
+  },
+];
+
+const MAJOR_SUGGESTIONS: Record<string, string[]> = {
+  "building+lab": ["Mechanical Engineering", "Electrical Engineering", "Chemical Engineering"],
+  "building+desk": ["Computer Science", "Software Engineering", "Information Technology"],
+  "building+field": ["Civil Engineering", "Architecture", "Environmental Engineering"],
+  "helping+clinic": ["Nursing", "Pre-Medicine", "Physical Therapy"],
+  "helping+field": ["Social Work", "Public Health", "Education"],
+  "helping+desk": ["Psychology", "Human Resources", "Counseling"],
+  "analyzing+desk": ["Data Science", "Finance", "Economics"],
+  "analyzing+lab": ["Biochemistry", "Statistics", "Neuroscience"],
+  "creating+anywhere": ["Graphic Design", "Film Studies", "Creative Writing"],
+  "creating+desk": ["UX Design", "Digital Media", "Communications"],
+  "leading+desk": ["Business Administration", "Marketing", "Entrepreneurship"],
+  "leading+anywhere": ["International Business", "Political Science", "Law"],
+};
+
+function getMajorSuggestions(answers: Record<string, string>): string[] {
+  const key = `${answers.activity}+${answers.environment}`;
+  if (MAJOR_SUGGESTIONS[key]) return MAJOR_SUGGESTIONS[key];
+  // Fallback by activity alone
+  const activityMap: Record<string, string[]> = {
+    building: ["Engineering", "Computer Science", "Architecture"],
+    helping: ["Nursing", "Psychology", "Social Work"],
+    analyzing: ["Data Science", "Finance", "Economics"],
+    creating: ["Graphic Design", "Communications", "Film Studies"],
+    leading: ["Business Administration", "Marketing", "Political Science"],
+  };
+  return activityMap[answers.activity] || ["Business Administration", "Computer Science", "Psychology"];
+}
+
+function InterestQuiz({ onComplete }: { onComplete: (majors: string[]) => void }) {
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [selected, setSelected] = useState<string>("");
+
+  const question = QUIZ_QUESTIONS[step];
+  const isLast = step === QUIZ_QUESTIONS.length - 1;
+  const progress = ((step) / QUIZ_QUESTIONS.length) * 100;
+
+  const handleNext = () => {
+    if (!selected) return;
+    const newAnswers = { ...answers, [question.id]: selected };
+    setAnswers(newAnswers);
+    setSelected("");
+    if (isLast) {
+      onComplete(getMajorSuggestions(newAnswers));
+    } else {
+      setStep((s) => s + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (step === 0) return;
+    setStep((s) => s - 1);
+    setSelected(answers[QUIZ_QUESTIONS[step - 1].id] || "");
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-lg">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 bg-slate-900 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
+            <Sparkles className="w-3.5 h-3.5" />
+            Quick Quiz · {QUIZ_QUESTIONS.length} questions
+          </div>
+          <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-3">Find your perfect major</h1>
+          <p className="text-slate-500">Answer a few quick questions and we'll suggest majors that match your interests.</p>
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full bg-slate-200 rounded-full h-1.5 mb-8 overflow-hidden">
+          <div
+            className="bg-slate-900 h-1.5 rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        {/* Question card */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 animate-in fade-in slide-in-from-bottom-4 duration-400">
+          <div className="text-4xl mb-4 text-center">{question.emoji}</div>
+          <h2 className="text-xl font-serif font-bold text-slate-900 text-center mb-6">{question.question}</h2>
+          <div className="space-y-3">
+            {question.options.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSelected(opt.value)}
+                className={`w-full text-left px-5 py-3.5 rounded-xl border text-sm font-medium transition-all ${
+                  selected === opt.value
+                    ? "bg-slate-900 border-slate-900 text-white"
+                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between mt-6">
+          <button
+            onClick={handleBack}
+            disabled={step === 0}
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-4 h-4" /> Back
+          </button>
+          <span className="text-sm text-slate-400 font-medium">{step + 1} / {QUIZ_QUESTIONS.length}</span>
+          <button
+            onClick={handleNext}
+            disabled={!selected}
+            className="flex items-center gap-1.5 bg-slate-900 text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {isLast ? "See Results" : "Next"} <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Quiz Results splash ──────────────────────────────────────────────
+function QuizResults({ majors, onExplore, onDismiss }: { majors: string[]; onExplore: (major: string) => void; onDismiss: () => void }) {
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-lg text-center">
+        <div className="text-5xl mb-5">🎉</div>
+        <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-3">Your top matches!</h1>
+        <p className="text-slate-500 mb-8">Based on your interests, here are the majors we think you'll love. Click one to explore it.</p>
+        <div className="space-y-3 mb-8">
+          {majors.map((major, i) => (
+            <button
+              key={major}
+              onClick={() => onExplore(major)}
+              className="w-full flex items-center gap-4 bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-slate-400 hover:shadow-md transition-all group"
+            >
+              <span className="w-10 h-10 rounded-xl bg-slate-900 text-white font-serif font-bold text-lg flex items-center justify-center flex-shrink-0">
+                {i + 1}
+              </span>
+              <span className="flex-1 font-serif font-bold text-slate-900 text-lg">{major}</span>
+              <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-700 transition-colors" />
+            </button>
+          ))}
+        </div>
+        <button onClick={onDismiss} className="text-sm text-slate-400 hover:text-slate-700 transition-colors underline underline-offset-2">
+          Skip and explore on my own
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ─── Curriculum Modal ────────────────────────────────────────────────
@@ -123,7 +411,7 @@ function CurriculumModal({ college, major, onClose }: { college: College; major:
   );
 }
 
-// ─── Saved View (original — majors + colleges) ───────────────────────
+// ─── Saved View ───────────────────────────────────────────────────────
 type SortMode = "rank" | "alpha";
 
 function SavedView({ saved, onUnsaveMajor, onUnsaveCollege }: {
@@ -139,7 +427,6 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege }: {
   const toggleExpand = (name: string) => setExpanded(prev => ({ ...prev, [name]: !prev[name] }));
   const getSortMode = (name: string): SortMode => sortMode[name] || "rank";
   const toggleSort = (name: string) => setSortMode(prev => ({ ...prev, [name]: prev[name] === "alpha" ? "rank" : "alpha" }));
-
   const sortedColleges = (colleges: SavedCollege[], mode: SortMode) =>
     mode === "alpha" ? [...colleges].sort((a, b) => a.name.localeCompare(b.name)) : [...colleges].sort((a, b) => a.rank - b.rank);
 
@@ -150,7 +437,7 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege }: {
           <Bookmark className="w-8 h-8 text-slate-400" />
         </div>
         <h3 className="text-xl font-serif text-slate-800 font-bold mb-2">No saved items yet</h3>
-        <p className="text-slate-500 max-w-sm">Search for a major and click "Save Major" to bookmark it here. You can also save colleges to this list.</p>
+        <p className="text-slate-500 max-w-sm">Search for a major and click "Save Major" to bookmark it here.</p>
       </div>
     );
   }
@@ -183,13 +470,11 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege }: {
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-
               {isOpen && item.description && (
                 <div className="px-5 md:px-6 pb-4 -mt-2">
                   <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">{item.description}</p>
                 </div>
               )}
-
               {isOpen && (
                 <div className="border-t border-slate-100">
                   {item.colleges.length > 0 ? (
@@ -247,17 +532,14 @@ function MyCollegesView({ myColleges, onRemove }: {
   const getSortMode = (name: string): SortMode => sortMode[name] || "rank";
   const toggleSort = (name: string) => setSortMode(prev => ({ ...prev, [name]: prev[name] === "alpha" ? "rank" : "alpha" }));
 
-  const sortedColleges = (colleges: MyCollege[], mode: SortMode) =>
-    mode === "alpha" ? [...colleges].sort((a, b) => a.name.localeCompare(b.name)) : [...colleges].sort((a, b) => a.rank - b.rank);
-
   if (totalColleges === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center px-4">
         <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-5">
           <GraduationCap className="w-8 h-8 text-slate-400" />
         </div>
-        <h3 className="text-xl font-serif text-slate-800 font-bold mb-2">No colleges here yet</h3>
-        <p className="text-slate-500 max-w-sm">When saving a college, choose "My Colleges" to add it to this list.</p>
+        <h3 className="text-xl font-serif text-slate-800 font-bold mb-2">No colleges saved yet</h3>
+        <p className="text-slate-500 max-w-sm">Browse majors and bookmark colleges to "My Colleges" using the save button on each college card.</p>
       </div>
     );
   }
@@ -266,35 +548,35 @@ function MyCollegesView({ myColleges, onRemove }: {
     <div className="w-full max-w-3xl mx-auto px-4 py-10">
       <div className="mb-8">
         <h2 className="text-3xl font-serif font-bold text-slate-900">My Colleges</h2>
-        <p className="text-slate-500 mt-1">{totalColleges} {totalColleges === 1 ? "college" : "colleges"} across {groups.length} {groups.length === 1 ? "major" : "majors"}</p>
+        <p className="text-slate-500 mt-1">{totalColleges} saved {totalColleges === 1 ? "college" : "colleges"}</p>
       </div>
       <div className="space-y-6">
         {groups.map(([majorName, colleges]) => {
           const mode = getSortMode(majorName);
-          const sorted = sortedColleges(colleges, mode);
+          const sorted = mode === "alpha" ? [...colleges].sort((a, b) => a.name.localeCompare(b.name)) : [...colleges].sort((a, b) => a.rank - b.rank);
           return (
             <div key={majorName} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="flex items-center justify-between px-5 md:px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center justify-between px-5 md:px-6 py-4 bg-slate-50 border-b border-slate-100">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
                     <GraduationCap className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <p className="font-serif font-bold text-slate-900 text-base">{majorName}</p>
-                    <p className="text-xs text-slate-400">{sorted.length} {sorted.length === 1 ? "college" : "colleges"}</p>
+                    <h3 className="font-serif font-bold text-slate-900 text-base leading-tight">{majorName}</h3>
+                    <p className="text-slate-500 text-xs">{colleges.length} {colleges.length === 1 ? "college" : "colleges"}</p>
                   </div>
                 </div>
-                <button onClick={() => toggleSort(majorName)} className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors px-3 py-1.5 rounded-full border border-slate-200 hover:border-slate-300">
+                <button onClick={() => toggleSort(majorName)} className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors">
                   <SortAsc className="w-3.5 h-3.5" />
                   {mode === "rank" ? "By Rank" : "A–Z"}
                 </button>
               </div>
               <ul className="divide-y divide-slate-100">
                 {sorted.map((college) => (
-                  <li key={college.name} className="flex items-center gap-3 px-5 md:px-6 py-4 hover:bg-slate-50 transition-colors group">
-                    <span className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 text-sm font-bold font-serif flex items-center justify-center flex-shrink-0">#{college.rank}</span>
+                  <li key={`${college.name}-${majorName}`} className="group flex items-center gap-3 px-5 md:px-6 py-3.5 hover:bg-slate-50 transition-colors">
+                    <span className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center flex-shrink-0">#{college.rank}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900 text-sm">{college.name}</p>
+                      <p className="font-semibold text-slate-900 text-sm truncate">{college.name}</p>
                       <div className="flex items-center gap-1 mt-0.5">
                         <MapPin className="w-3 h-3 text-slate-400" />
                         <p className="text-slate-400 text-xs">{college.location}</p>
@@ -314,23 +596,28 @@ function MyCollegesView({ myColleges, onRemove }: {
   );
 }
 
-// ─── Explore View ────────────────────────────────────────────────────
-function ExploreView({
-  saved, setSaved, myColleges, setMyColleges
-}: {
+// ─── Explore View ──────────────────────────────────────────────────────
+function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor }: {
   saved: SavedData;
   setSaved: (d: SavedData) => void;
   myColleges: MyCollege[];
   setMyColleges: (d: MyCollege[]) => void;
+  initialMajor?: string;
 }) {
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(initialMajor || "");
+  const [currentMajor, setCurrentMajor] = useState(initialMajor || "");
   const [selectedCollege, setSelectedCollege] = useState<College | null>(null);
-  const [currentMajor, setCurrentMajor] = useState("");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const lookupMajor = useLookupMajor();
 
-  // Close dropdown on outside click
+  useEffect(() => {
+    if (initialMajor) {
+      lookupMajor.mutate({ data: { major: initialMajor } });
+      setCurrentMajor(initialMajor);
+    }
+  }, [initialMajor]);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -359,7 +646,6 @@ function ExploreView({
     setCurrentMajor(major);
   };
 
-  // Major save helpers
   const isMajorSaved = (majorName: string) => !!saved[majorName];
 
   const saveMajor = useCallback(() => {
@@ -378,13 +664,10 @@ function ExploreView({
     setSaved(updated); persistSaved(updated);
   }, [saved, lookupMajor.data, setSaved]);
 
-  // College save helpers
   const isInSaved = (majorName: string, collegeName: string) =>
     !!saved[majorName]?.colleges.find((c) => c.name === collegeName);
-
   const isInMyColleges = (collegeName: string, majorName: string) =>
     myColleges.some((c) => c.name === collegeName && c.majorName === majorName);
-
   const isAnywhereSaved = (majorName: string, collegeName: string) =>
     isInSaved(majorName, collegeName) || isInMyColleges(collegeName, majorName);
 
@@ -483,7 +766,6 @@ function ExploreView({
 
         {!isLoading && !isError && result && (
           <div className="w-full animate-in fade-in slide-in-from-bottom-8 duration-700">
-            {/* Major Description Card */}
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 md:p-12 mb-10 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-50 pointer-events-none" />
               <div className="flex items-start justify-between gap-4 mb-5 relative z-10">
@@ -524,7 +806,6 @@ function ExploreView({
               )}
             </div>
 
-            {/* College Cards */}
             <div className="mb-4 flex items-center gap-2">
               <GraduationCap className="w-6 h-6 text-slate-800" />
               <h3 className="text-2xl font-serif text-slate-900 font-bold">Top Colleges</h3>
@@ -551,7 +832,6 @@ function ExploreView({
                           #{college.rank}
                         </div>
                       </div>
-
                       <button className="flex-1 min-w-0 text-left" onClick={() => { setOpenDropdown(null); setSelectedCollege(college); }}>
                         <h4 className="text-xl font-bold text-slate-900 mb-1 group-hover:text-slate-700 transition-colors">{college.name}</h4>
                         <div className="flex items-center text-slate-500 mb-3 text-sm font-medium">
@@ -559,8 +839,6 @@ function ExploreView({
                         </div>
                         <p className="text-slate-600 leading-relaxed text-sm md:text-base">{college.highlights}</p>
                       </button>
-
-                      {/* Save button + dropdown */}
                       <div className="flex-shrink-0 flex flex-col items-center gap-2 pl-2 md:pl-4 md:border-l md:border-slate-100 relative">
                         <button
                           onClick={(e) => { e.stopPropagation(); setOpenDropdown(isOpen ? null : dropKey); }}
@@ -570,8 +848,6 @@ function ExploreView({
                         >
                           {anySaved ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
                         </button>
-
-                        {/* Dropdown picker */}
                         {isOpen && (
                           <div className="absolute right-0 top-11 z-30 bg-white border border-slate-200 rounded-2xl shadow-xl w-48 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                             <p className="px-4 pt-3 pb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Save to</p>
@@ -596,7 +872,6 @@ function ExploreView({
                             <div className="h-2" />
                           </div>
                         )}
-
                         <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
                       </div>
                     </div>
@@ -715,6 +990,55 @@ function ChatWidget() {
   );
 }
 
+// ─── User Menu ────────────────────────────────────────────────────────
+function UserMenu() {
+  const { signOut } = useClerk();
+  const { user } = useUser();
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const displayName = user?.firstName || user?.emailAddresses?.[0]?.emailAddress?.split("@")[0] || "Account";
+  const initials = (user?.firstName?.[0] || "") + (user?.lastName?.[0] || "");
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 pl-3 pr-4 py-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all"
+      >
+        <div className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold">
+          {initials || <User className="w-3.5 h-3.5" />}
+        </div>
+        <span className="text-sm font-medium text-slate-700 max-w-[100px] truncate">{displayName}</span>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-12 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl w-52 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <p className="text-xs text-slate-400 font-medium">Signed in as</p>
+            <p className="text-sm font-semibold text-slate-900 truncate mt-0.5">{user?.emailAddresses?.[0]?.emailAddress}</p>
+          </div>
+          <button
+            onClick={() => signOut({ redirectUrl: basePath || "/" })}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── App Shell ────────────────────────────────────────────────────────
 type AppView = "explore" | "colleges" | "saved";
 
@@ -722,6 +1046,11 @@ function AppShell() {
   const [view, setView] = useState<AppView>("explore");
   const [saved, setSaved] = useState<SavedData>(loadSaved);
   const [myColleges, setMyColleges] = useState<MyCollege[]>(loadMyColleges);
+  const [quizState, setQuizState] = useState<"quiz" | "results" | "done">(() =>
+    localStorage.getItem(QUIZ_DONE_KEY) ? "done" : "quiz"
+  );
+  const [quizResults, setQuizResults] = useState<string[]>([]);
+  const [exploreInitialMajor, setExploreInitialMajor] = useState<string | undefined>();
 
   const savedMajorCount = Object.keys(saved).length;
   const savedCollegeCount = myColleges.length;
@@ -745,6 +1074,37 @@ function AppShell() {
     setMyColleges(updated); persistMyColleges(updated);
   };
 
+  const handleQuizComplete = (majors: string[]) => {
+    setQuizResults(majors);
+    setQuizState("results");
+  };
+
+  const handleExploreMajor = (major: string) => {
+    localStorage.setItem(QUIZ_DONE_KEY, "1");
+    setQuizState("done");
+    setExploreInitialMajor(major);
+    setView("explore");
+  };
+
+  const handleDismissQuiz = () => {
+    localStorage.setItem(QUIZ_DONE_KEY, "1");
+    setQuizState("done");
+  };
+
+  if (quizState === "quiz") {
+    return <InterestQuiz onComplete={handleQuizComplete} />;
+  }
+
+  if (quizState === "results") {
+    return (
+      <QuizResults
+        majors={quizResults}
+        onExplore={handleExploreMajor}
+        onDismiss={handleDismissQuiz}
+      />
+    );
+  }
+
   const navBtn = (target: AppView, label: string, count?: number) => (
     <button
       onClick={() => setView(target)}
@@ -766,17 +1126,24 @@ function AppShell() {
           <Milestone className="w-5 h-5 text-slate-700" />
           <span className="font-serif font-semibold text-lg tracking-tight">Next Steps</span>
         </button>
-        <nav className="flex items-center gap-1">
-          {navBtn("explore", "Explore")}
-          {navBtn("colleges", "My Colleges", savedCollegeCount)}
-          {navBtn("saved", "Saved", savedMajorCount)}
-        </nav>
+        <div className="flex items-center gap-3">
+          <nav className="flex items-center gap-1">
+            {navBtn("explore", "Explore")}
+            {navBtn("colleges", "My Colleges", savedCollegeCount)}
+            {navBtn("saved", "Saved", savedMajorCount)}
+          </nav>
+          <Show when="signed-in">
+            <div className="w-px h-5 bg-slate-200 mx-1" />
+            <UserMenu />
+          </Show>
+        </div>
       </header>
 
       {view === "explore" && (
         <ExploreView
           saved={saved} setSaved={setSaved}
           myColleges={myColleges} setMyColleges={setMyColleges}
+          initialMajor={exploreInitialMajor}
         />
       )}
       {view === "colleges" && (
@@ -791,25 +1158,168 @@ function AppShell() {
   );
 }
 
-function Router() {
+// ─── Landing Page ─────────────────────────────────────────────────────
+function LandingPage() {
+  const [, setLocation] = useLocation();
   return (
-    <Switch>
-      <Route path="/" component={AppShell} />
-      <Route component={NotFound} />
-    </Switch>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <header className="w-full py-4 px-6 lg:px-12 flex items-center justify-between border-b border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center gap-2">
+          <Milestone className="w-5 h-5 text-slate-700" />
+          <span className="font-serif font-semibold text-lg tracking-tight text-slate-900">Next Steps</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setLocation("/sign-in")} className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-4 py-2 rounded-full hover:bg-slate-100">
+            Sign in
+          </button>
+          <button onClick={() => setLocation("/sign-up")} className="text-sm font-semibold bg-slate-900 text-white px-5 py-2 rounded-full hover:bg-slate-700 transition-colors">
+            Get started
+          </button>
+        </div>
+      </header>
+
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-20 text-center">
+        <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
+          <Sparkles className="w-3.5 h-3.5" />
+          AI-powered college major explorer
+        </div>
+        <h1 className="text-5xl md:text-7xl font-serif font-bold text-slate-900 mb-6 leading-tight max-w-3xl">
+          Find the major that's right for you.
+        </h1>
+        <p className="text-xl text-slate-500 max-w-xl mb-10 leading-relaxed">
+          Take a quick quiz, get personalized major recommendations, and explore the top US universities for any field.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <button onClick={() => setLocation("/sign-up")} className="flex items-center gap-2 bg-slate-900 text-white text-base font-semibold px-8 py-4 rounded-full hover:bg-slate-700 transition-colors shadow-lg">
+            Start for free <ChevronRight className="w-5 h-5" />
+          </button>
+          <button onClick={() => setLocation("/sign-in")} className="text-base font-medium text-slate-600 hover:text-slate-900 transition-colors">
+            Already have an account →
+          </button>
+        </div>
+
+        <div className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl w-full">
+          {[
+            { emoji: "🎯", title: "Personalized quiz", desc: "Answer 5 quick questions to get matched with majors that fit your interests and strengths." },
+            { emoji: "🏛️", title: "Top 10 colleges", desc: "Instantly see the top US universities for any major, with highlights on what makes each one great." },
+            { emoji: "🗓️", title: "4-year course plan", desc: "Click any college to see a realistic 4-year course plan tailored to your major." },
+          ].map(({ emoji, title, desc }) => (
+            <div key={title} className="bg-white rounded-2xl border border-slate-200 p-6 text-left shadow-sm">
+              <div className="text-3xl mb-3">{emoji}</div>
+              <h3 className="font-serif font-bold text-slate-900 text-lg mb-2">{title}</h3>
+              <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ─── Sign-in / Sign-up pages ──────────────────────────────────────────
+function SignInPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+    </div>
+  );
+}
+
+function SignUpPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+    </div>
+  );
+}
+
+// ─── Home redirect ────────────────────────────────────────────────────
+function HomeRedirect() {
+  return (
+    <>
+      <Show when="signed-in">
+        <Redirect to="/app" />
+      </Show>
+      <Show when="signed-out">
+        <LandingPage />
+      </Show>
+    </>
+  );
+}
+
+function AppRoute() {
+  return (
+    <>
+      <Show when="signed-in">
+        <AppShell />
+      </Show>
+      <Show when="signed-out">
+        <Redirect to="/" />
+      </Show>
+    </>
+  );
+}
+
+// ─── Cache invalidator ────────────────────────────────────────────────
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk();
+  const qc = useQueryClient();
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const unsubscribe = addListener(({ user }) => {
+      const userId = user?.id ?? null;
+      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
+        qc.clear();
+      }
+      prevUserIdRef.current = userId;
+    });
+    return unsubscribe;
+  }, [addListener, qc]);
+
+  return null;
+}
+
+// ─── Clerk Provider + Routes ──────────────────────────────────────────
+function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <ClerkProvider
+      publishableKey={clerkPubKey}
+      proxyUrl={clerkProxyUrl}
+      appearance={clerkAppearance}
+      signInUrl={`${basePath}/sign-in`}
+      signUpUrl={`${basePath}/sign-up`}
+      localization={{
+        signIn: { start: { title: "Welcome back", subtitle: "Sign in to your Next Steps account" } },
+        signUp: { start: { title: "Create your account", subtitle: "Start discovering your perfect major" } },
+      }}
+      routerPush={(to) => setLocation(stripBase(to))}
+      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+    >
+      <QueryClientProvider client={queryClient}>
+        <ClerkQueryClientCacheInvalidator />
+        <TooltipProvider>
+          <Switch>
+            <Route path="/" component={HomeRedirect} />
+            <Route path="/app" component={AppRoute} />
+            <Route path="/sign-in/*?" component={SignInPage} />
+            <Route path="/sign-up/*?" component={SignUpPage} />
+            <Route component={NotFound} />
+          </Switch>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ClerkProvider>
   );
 }
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <WouterRouter base={basePath}>
+      <ClerkProviderWithRoutes />
+    </WouterRouter>
   );
 }
 

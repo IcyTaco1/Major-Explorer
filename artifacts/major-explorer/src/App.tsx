@@ -100,6 +100,7 @@ interface MyCollege extends College {
 const SAVED_KEY = "declare-saved-majors";
 const MY_COLLEGES_KEY = "next-steps-my-colleges";
 const QUIZ_DONE_KEY = "next-steps-quiz-done";
+const QUIZ_RESULTS_KEY = "next-steps-quiz-results";
 
 function loadSaved(): SavedData {
   try { return JSON.parse(localStorage.getItem(SAVED_KEY) ?? "{}") ?? {}; }
@@ -725,7 +726,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor 
       <div className="w-full max-w-4xl">
         {isIdle && (
           <div className="flex flex-col items-center justify-center animate-in fade-in duration-500 delay-300 fill-mode-both">
-            <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-4">Suggested Majors</p>
+            <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-4">Popular Majors</p>
             <div className="flex flex-wrap justify-center gap-3">
               {["Finance", "Computer Science", "Nursing", "Psychology", "Mechanical Engineering"].map((major) => (
                 <button key={major} onClick={() => setSuggestedMajor(major)} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-slate-700 hover:border-slate-400 hover:shadow-sm transition-all">{major}</button>
@@ -1039,8 +1040,60 @@ function UserMenu() {
   );
 }
 
+// ─── Suggested Majors View ────────────────────────────────────────────
+function SuggestedView({ results, onExplore, onRetake }: {
+  results: string[];
+  onExplore: (major: string) => void;
+  onRetake: () => void;
+}) {
+  if (results.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center px-4">
+        <div className="text-5xl mb-5">🎯</div>
+        <h3 className="text-xl font-bold text-slate-800 mb-2">No suggestions yet</h3>
+        <p className="text-slate-500 max-w-sm mb-8">Take the quiz to get personalized major recommendations based on your interests.</p>
+        <button onClick={onRetake} className="flex items-center gap-2 bg-slate-900 text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-slate-700 transition-colors">
+          <Sparkles className="w-4 h-4" /> Take the Quiz
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-3xl mx-auto px-4 py-10">
+      <div className="flex items-start justify-between mb-8 gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900">Suggested Majors</h2>
+          <p className="text-slate-500 mt-1">Based on your quiz answers — click any to explore it.</p>
+        </div>
+        <button
+          onClick={onRetake}
+          className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 text-sm font-medium text-slate-600 hover:border-slate-400 hover:text-slate-900 hover:bg-white transition-all bg-white"
+        >
+          <Sparkles className="w-3.5 h-3.5" /> Retake Quiz
+        </button>
+      </div>
+      <div className="space-y-3">
+        {results.map((major, i) => (
+          <button
+            key={major}
+            onClick={() => onExplore(major)}
+            className="w-full flex items-center gap-4 bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-slate-400 hover:shadow-md transition-all group"
+          >
+            <span className="w-10 h-10 rounded-xl bg-slate-900 text-white font-bold text-lg flex items-center justify-center flex-shrink-0 font-sans">
+              {i + 1}
+            </span>
+            <span className="flex-1 font-bold text-slate-900 text-lg">{major}</span>
+            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-700 transition-colors" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── App Shell ────────────────────────────────────────────────────────
-type AppView = "explore" | "colleges" | "saved";
+type AppView = "explore" | "suggested" | "colleges" | "saved";
 
 function AppShell() {
   const [view, setView] = useState<AppView>("explore");
@@ -1049,7 +1102,10 @@ function AppShell() {
   const [quizState, setQuizState] = useState<"quiz" | "results" | "done">(() =>
     localStorage.getItem(QUIZ_DONE_KEY) ? "done" : "quiz"
   );
-  const [quizResults, setQuizResults] = useState<string[]>([]);
+  const [quizResults, setQuizResults] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(QUIZ_RESULTS_KEY) ?? "[]") ?? []; }
+    catch { return []; }
+  });
   const [exploreInitialMajor, setExploreInitialMajor] = useState<string | undefined>();
 
   const savedMajorCount = Object.keys(saved).length;
@@ -1076,6 +1132,7 @@ function AppShell() {
 
   const handleQuizComplete = (majors: string[]) => {
     setQuizResults(majors);
+    localStorage.setItem(QUIZ_RESULTS_KEY, JSON.stringify(majors));
     setQuizState("results");
   };
 
@@ -1089,6 +1146,11 @@ function AppShell() {
   const handleDismissQuiz = () => {
     localStorage.setItem(QUIZ_DONE_KEY, "1");
     setQuizState("done");
+  };
+
+  const handleRetakeQuiz = () => {
+    localStorage.removeItem(QUIZ_DONE_KEY);
+    setQuizState("quiz");
   };
 
   if (quizState === "quiz") {
@@ -1129,6 +1191,7 @@ function AppShell() {
         <div className="flex items-center gap-3">
           <nav className="flex items-center gap-1">
             {navBtn("explore", "Explore")}
+            {navBtn("suggested", "Suggested")}
             {navBtn("colleges", "My Colleges", savedCollegeCount)}
             {navBtn("saved", "Saved", savedMajorCount)}
           </nav>
@@ -1144,6 +1207,13 @@ function AppShell() {
           saved={saved} setSaved={setSaved}
           myColleges={myColleges} setMyColleges={setMyColleges}
           initialMajor={exploreInitialMajor}
+        />
+      )}
+      {view === "suggested" && (
+        <SuggestedView
+          results={quizResults}
+          onExplore={(major) => { setExploreInitialMajor(major); setView("explore"); }}
+          onRetake={handleRetakeQuiz}
         />
       )}
       {view === "colleges" && (

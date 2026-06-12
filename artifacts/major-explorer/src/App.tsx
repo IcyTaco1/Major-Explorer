@@ -450,6 +450,22 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
   ],
 ];
 
+// Most-awarded U.S. bachelor's degree fields, ordered by popularity.
+// Source: NCES Digest of Education Statistics 2021–22 (Table 322.10 /
+// Fast Facts #37): Business, Health Professions, Social Sciences & History,
+// Biological Sciences, Psychology, Computer & Information Sciences,
+// Engineering, Communication & Journalism. Mapped to recognizable major names.
+const POPULAR_MAJORS = [
+  "Business",
+  "Nursing",
+  "Political Science",
+  "Biology",
+  "Psychology",
+  "Computer Science",
+  "Mechanical Engineering",
+  "Communications",
+];
+
 // ─── Major recommender ────────────────────────────────────────────────
 // Every major is tagged with the answer `value`s it aligns with across all
 // five quiz dimensions. We score each major against the user's actual
@@ -1083,9 +1099,10 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor 
       <div className="w-full max-w-4xl">
         {isIdle && (
           <div className="flex flex-col items-center justify-center animate-in fade-in duration-500 delay-300 fill-mode-both">
-            <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-4">Popular Majors</p>
+            <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Popular Majors</p>
+            <p className="text-xs text-slate-400 mb-4">Top fields by U.S. bachelor's degrees awarded · NCES 2021–22</p>
             <div className="flex flex-wrap justify-center gap-3">
-              {["Finance", "Computer Science", "Nursing", "Psychology", "Mechanical Engineering"].map((major) => (
+              {POPULAR_MAJORS.map((major) => (
                 <button key={major} onClick={() => setSuggestedMajor(major)} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-slate-700 hover:border-slate-400 hover:shadow-sm transition-all">{major}</button>
               ))}
             </div>

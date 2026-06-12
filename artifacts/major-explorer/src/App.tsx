@@ -450,20 +450,27 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
   ],
 ];
 
-// Most-awarded U.S. bachelor's degree fields, ordered by popularity.
-// Source: NCES Digest of Education Statistics 2021–22 (Table 322.10 /
-// Fast Facts #37): Business, Health Professions, Social Sciences & History,
-// Biological Sciences, Psychology, Computer & Information Sciences,
-// Engineering, Communication & Journalism. Mapped to recognizable major names.
+// Top 8 most-awarded U.S. bachelor's degree fields, in exact order of degrees
+// conferred. Source: NCES Digest of Education Statistics 2023, Table 322.10
+// (2021–22 — the most recent published data; the 2022–23 Digest is not yet out):
+//   1. Business (375,418)            -> Business
+//   2. Health Professions (263,765)  -> Nursing
+//   3. Social Sciences & History (151,109) -> Political Science
+//   4. Biological Sciences (131,462) -> Biology
+//   5. Psychology (129,609)          -> Psychology
+//   6. Engineering (123,017)         -> Mechanical Engineering
+//   7. Computer & Info Sciences (108,503) -> Computer Science
+//   8. Visual & Performing Arts (90,241)  -> Fine Arts
+// Broad NCES fields are mapped to recognizable, searchable major names.
 const POPULAR_MAJORS = [
   "Business",
   "Nursing",
   "Political Science",
   "Biology",
   "Psychology",
-  "Computer Science",
   "Mechanical Engineering",
-  "Communications",
+  "Computer Science",
+  "Fine Arts",
 ];
 
 // ─── Major recommender ────────────────────────────────────────────────

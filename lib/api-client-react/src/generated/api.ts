@@ -17,8 +17,9 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  CareerInfo,
+  ChatReply,
   ChatRequest,
-  ChatResponse,
   CurriculumRequest,
   CurriculumResponse,
   ErrorResponse,
@@ -287,6 +288,82 @@ export const useGetMajorCurriculum = <
 };
 
 /**
+ * Returns the full catalog of occupations with BLS salary, projected job growth, and typical education
+ * @summary List all careers with BLS data
+ */
+export const getGetCareersUrl = () => {
+  return `/api/careers`;
+};
+
+export const getCareers = async (
+  options?: RequestInit,
+): Promise<CareerInfo[]> => {
+  return customFetch<CareerInfo[]>(getGetCareersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCareersQueryKey = () => {
+  return [`/api/careers`] as const;
+};
+
+export const getGetCareersQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCareers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCareers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCareersQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCareers>>> = ({
+    signal,
+  }) => getCareers({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCareers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCareersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCareers>>
+>;
+export type GetCareersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all careers with BLS data
+ */
+
+export function useGetCareers<
+  TData = Awaited<ReturnType<typeof getCareers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCareers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCareersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * Send a conversation history and receive an AI response
  * @summary Chat with AI advisor
  */
@@ -297,8 +374,8 @@ export const getChatUrl = () => {
 export const chat = async (
   chatRequest: ChatRequest,
   options?: RequestInit,
-): Promise<ChatResponse> => {
-  return customFetch<ChatResponse>(getChatUrl(), {
+): Promise<ChatReply> => {
+  return customFetch<ChatReply>(getChatUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -337,6 +414,7 @@ export const getChatMutationOptions = <
     { data: BodyType<ChatRequest> }
   > = (props) => {
     const { data } = props ?? {};
+
     return chat(data, requestOptions);
   };
 

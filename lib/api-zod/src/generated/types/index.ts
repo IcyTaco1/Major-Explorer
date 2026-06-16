@@ -6,6 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./admissionsProfile";
+export * from "./admissionsProfileSelectivityTier";
+export * from "./careerInfo";
+export * from "./chatMessage";
+export * from "./chatMessageRole";
+export * from "./chatReply";
+export * from "./chatRequest";
 export * from "./college";
 export * from "./course";
 export * from "./curriculumRequest";

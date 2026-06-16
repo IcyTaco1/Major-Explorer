@@ -26,12 +26,61 @@ export const LookupMajorBody = zod.object({
 export const LookupMajorResponse = zod.object({
   major: zod.string(),
   description: zod.string(),
+  career: zod
+    .union([
+      zod
+        .object({
+          occupation: zod.string(),
+          socCode: zod.string(),
+          annualMedianWage: zod.number(),
+          annualEntryWage: zod.number(),
+          annualExperiencedWage: zod.number(),
+          projectedGrowthPct: zod.number(),
+          typicalEducation: zod.string(),
+          sourceName: zod.string(),
+          sourceUrl: zod.string(),
+          wageDataYear: zod.string(),
+          growthDataPeriod: zod.string(),
+        })
+        .describe(
+          "Real occupation data from the U.S. Bureau of Labor Statistics",
+        ),
+      zod.null(),
+    ])
+    .describe(
+      "Real BLS career data, or null when no matching occupation was found",
+    ),
   topColleges: zod.array(
     zod.object({
       rank: zod.number(),
       name: zod.string(),
       location: zod.string(),
       highlights: zod.string(),
+      admissionsProfile: zod
+        .object({
+          gpaLow: zod
+            .number()
+            .nullish()
+            .describe(
+              "Lower bound of typical admitted GPA (≈25th percentile, 0-4 scale)",
+            ),
+          gpaHigh: zod
+            .number()
+            .nullish()
+            .describe(
+              "Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)",
+            ),
+          selectivityTier: zod.enum([
+            "most_selective",
+            "highly_selective",
+            "selective",
+            "accessible",
+          ]),
+        })
+        .optional()
+        .describe(
+          "Estimated admissions selectivity used to compute Reach\/Match\/Safety",
+        ),
     }),
   ),
 });
@@ -61,4 +110,42 @@ export const GetMajorCurriculumResponse = zod.object({
       ),
     }),
   ),
+});
+
+/**
+ * Returns the full catalog of occupations with BLS salary, projected job growth, and typical education
+ * @summary List all careers with BLS data
+ */
+export const GetCareersResponseItem = zod
+  .object({
+    occupation: zod.string(),
+    socCode: zod.string(),
+    annualMedianWage: zod.number(),
+    annualEntryWage: zod.number(),
+    annualExperiencedWage: zod.number(),
+    projectedGrowthPct: zod.number(),
+    typicalEducation: zod.string(),
+    sourceName: zod.string(),
+    sourceUrl: zod.string(),
+    wageDataYear: zod.string(),
+    growthDataPeriod: zod.string(),
+  })
+  .describe("Real occupation data from the U.S. Bureau of Labor Statistics");
+export const GetCareersResponse = zod.array(GetCareersResponseItem);
+
+/**
+ * Send a conversation history and receive an AI response
+ * @summary Chat with AI advisor
+ */
+export const ChatBody = zod.object({
+  messages: zod.array(
+    zod.object({
+      role: zod.enum(["user", "assistant"]),
+      content: zod.string(),
+    }),
+  ),
+});
+
+export const ChatResponse = zod.object({
+  reply: zod.string(),
 });

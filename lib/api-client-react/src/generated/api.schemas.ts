@@ -14,23 +14,63 @@ export interface MajorLookupRequest {
   major: string;
 }
 
+export type AdmissionsProfileSelectivityTier =
+  (typeof AdmissionsProfileSelectivityTier)[keyof typeof AdmissionsProfileSelectivityTier];
+
+export const AdmissionsProfileSelectivityTier = {
+  most_selective: "most_selective",
+  highly_selective: "highly_selective",
+  selective: "selective",
+  accessible: "accessible",
+} as const;
+
+/**
+ * Estimated admissions selectivity used to compute Reach/Match/Safety
+ */
+export interface AdmissionsProfile {
+  /**
+   * Lower bound of typical admitted GPA (≈25th percentile, 0-4 scale)
+   * @nullable
+   */
+  gpaLow?: number | null;
+  /**
+   * Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)
+   * @nullable
+   */
+  gpaHigh?: number | null;
+  selectivityTier: AdmissionsProfileSelectivityTier;
+}
+
 export interface College {
   rank: number;
   name: string;
   location: string;
   highlights: string;
+  admissionsProfile?: AdmissionsProfile;
 }
 
-export interface SalaryInfo {
-  entryLevel: string;
-  midCareer: string;
-  experienced: string;
+/**
+ * Real occupation data from the U.S. Bureau of Labor Statistics
+ */
+export interface CareerInfo {
+  occupation: string;
+  socCode: string;
+  annualMedianWage: number;
+  annualEntryWage: number;
+  annualExperiencedWage: number;
+  projectedGrowthPct: number;
+  typicalEducation: string;
+  sourceName: string;
+  sourceUrl: string;
+  wageDataYear: string;
+  growthDataPeriod: string;
 }
 
 export interface MajorLookupResponse {
   major: string;
   description: string;
-  salary: SalaryInfo;
+  /** Real BLS career data, or null when no matching occupation was found */
+  career: CareerInfo | null;
   topColleges: College[];
 }
 
@@ -59,11 +99,13 @@ export interface CurriculumResponse {
   years: YearPlan[];
 }
 
-export interface ErrorResponse {
-  error: string;
-}
+export type ChatMessageRole =
+  (typeof ChatMessageRole)[keyof typeof ChatMessageRole];
 
-export type ChatMessageRole = "user" | "assistant";
+export const ChatMessageRole = {
+  user: "user",
+  assistant: "assistant",
+} as const;
 
 export interface ChatMessage {
   role: ChatMessageRole;
@@ -74,6 +116,10 @@ export interface ChatRequest {
   messages: ChatMessage[];
 }
 
-export interface ChatResponse {
+export interface ChatReply {
   reply: string;
+}
+
+export interface ErrorResponse {
+  error: string;
 }

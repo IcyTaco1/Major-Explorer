@@ -206,3 +206,6 @@
 .stagger-8 { animation-delay: 800ms; }
 .stagger-9 { animation-delay: 900ms; }
 .stagger-10 { animation-delay: 1000ms; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

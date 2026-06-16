@@ -13,6 +13,7 @@
     "@clerk/express": "^2.1.22",
     "@clerk/shared": "^4.14.0",
     "@workspace/api-zod": "workspace:*",
+    "@workspace/bls-data": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/integrations-openai-ai-server": "workspace:*",
     "cookie-parser": "^1.4.7",
@@ -21,7 +22,8 @@
     "express": "^5",
     "http-proxy-middleware": "^4.0.0",
     "pino": "^9",
-    "pino-http": "^10"
+    "pino-http": "^10",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

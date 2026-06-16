@@ -5,10 +5,12 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AdmissionsProfile } from "./admissionsProfile";
 
 export interface College {
   rank: number;
   name: string;
   location: string;
   highlights: string;
+  admissionsProfile?: AdmissionsProfile;
 }

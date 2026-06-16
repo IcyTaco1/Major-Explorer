@@ -5,10 +5,13 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { CareerInfo } from "./careerInfo";
 import type { College } from "./college";
 
 export interface MajorLookupResponse {
   major: string;
   description: string;
+  /** Real BLS career data, or null when no matching occupation was found */
+  career: CareerInfo | null;
   topColleges: College[];
 }

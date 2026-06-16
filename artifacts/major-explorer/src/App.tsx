@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
@@ -6,13 +6,14 @@ import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useLookupMajor, useGetMajorCurriculum, useChat } from "@workspace/api-client-react";
-import type { College, CurriculumResponse, ChatMessage } from "@workspace/api-client-react";
+import { useLookupMajor, useGetMajorCurriculum, useChat, useGetCareers } from "@workspace/api-client-react";
+import type { College, CurriculumResponse, ChatMessage, CareerInfo } from "@workspace/api-client-react";
 import {
   Search, GraduationCap, MapPin, Milestone, AlertCircle, X,
   ChevronRight, ChevronDown, ChevronUp, Bookmark, BookmarkCheck,
   Trash2, SortAsc, MessageCircle, Send, Bot, Check, DollarSign,
-  LogOut, User, ChevronLeft, Sparkles
+  LogOut, User, ChevronLeft, Sparkles, TrendingUp, Award, ExternalLink, Briefcase,
+  Settings, SlidersHorizontal, RotateCcw, Sun, Moon
 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 
@@ -52,28 +53,28 @@ const clerkAppearance = {
   },
   elements: {
     rootBox: "w-full flex justify-center",
-    cardBox: "bg-white rounded-2xl w-[440px] max-w-full overflow-hidden shadow-xl",
+    cardBox: "bg-card rounded-2xl w-[440px] max-w-full overflow-hidden shadow-xl",
     card: "!shadow-none !border-0 !bg-transparent !rounded-none",
     footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
-    headerTitle: "text-slate-900 font-serif font-bold",
-    headerSubtitle: "text-slate-500",
-    socialButtonsBlockButtonText: "text-slate-700 font-medium",
-    formFieldLabel: "text-slate-700 font-medium",
-    footerActionLink: "text-slate-900 font-semibold hover:text-slate-700",
-    footerActionText: "text-slate-500",
-    dividerText: "text-slate-400",
-    identityPreviewEditButton: "text-slate-900",
+    headerTitle: "text-foreground font-serif font-bold",
+    headerSubtitle: "text-muted-foreground",
+    socialButtonsBlockButtonText: "text-foreground font-medium",
+    formFieldLabel: "text-foreground font-medium",
+    footerActionLink: "text-foreground font-semibold hover:text-foreground",
+    footerActionText: "text-muted-foreground",
+    dividerText: "text-muted-foreground",
+    identityPreviewEditButton: "text-foreground",
     formFieldSuccessText: "text-green-600",
-    alertText: "text-slate-700",
+    alertText: "text-foreground",
     logoBox: "flex justify-center mb-2",
     logoImage: "w-10 h-10",
-    socialButtonsBlockButton: "border border-slate-200 hover:bg-slate-50",
-    formButtonPrimary: "bg-slate-900 hover:bg-slate-700 text-white font-semibold",
-    formFieldInput: "bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-800 focus:ring-slate-800",
-    footerAction: "border-t border-slate-100",
-    dividerLine: "bg-slate-200",
+    socialButtonsBlockButton: "border border-border hover:bg-muted",
+    formButtonPrimary: "bg-primary hover:bg-primary/90 text-primary-foreground font-semibold",
+    formFieldInput: "bg-background border-border text-foreground focus:border-ring focus:ring-ring",
+    footerAction: "border-t border-border",
+    dividerLine: "bg-border",
     alert: "bg-red-50 border border-red-100",
-    otpCodeFieldInput: "border-slate-200",
+    otpCodeFieldInput: "border-border",
     formFieldRow: "",
     main: "",
   },
@@ -120,6 +121,40 @@ function loadMyColleges(): MyCollege[] {
   catch { return []; }
 }
 function persistMyColleges(data: MyCollege[]) { localStorage.setItem(MY_COLLEGES_KEY, JSON.stringify(data)); }
+
+// User profile (GPA + goals). Stored ONLY in localStorage — the GPA is never
+// sent to the server or logged anywhere.
+interface UserProfile {
+  gpa: number | null;
+  goals: string;
+}
+const PROFILE_KEY = "next-steps-profile";
+const EMPTY_PROFILE: UserProfile = { gpa: null, goals: "" };
+function loadProfile(): UserProfile {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PROFILE_KEY) ?? "null");
+    if (!raw || typeof raw !== "object") return { ...EMPTY_PROFILE };
+    const gpaRaw = (raw as UserProfile).gpa;
+    const gpa = typeof gpaRaw === "number" && Number.isFinite(gpaRaw) ? gpaRaw : null;
+    const goals = typeof (raw as UserProfile).goals === "string" ? (raw as UserProfile).goals : "";
+    return { gpa, goals };
+  } catch { return { ...EMPTY_PROFILE }; }
+}
+function persistProfile(data: UserProfile) { localStorage.setItem(PROFILE_KEY, JSON.stringify(data)); }
+
+const THEME_KEY = "next-steps-theme";
+type Theme = "light" | "dark";
+function loadTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved === "dark" || saved === "light") return saved;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function applyTheme(theme: Theme) {
+  document.documentElement.classList.toggle("dark", theme === "dark");
+}
+function persistTheme(theme: Theme) { localStorage.setItem(THEME_KEY, theme); }
+if (typeof document !== "undefined") applyTheme(loadTheme());
 
 // ─── Interest Quiz ────────────────────────────────────────────────────
 interface QuizQuestion {
@@ -618,30 +653,30 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-slate-900 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
+          <div className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
             <Sparkles className="w-3.5 h-3.5" />
             Quick Quiz · {questions.length} questions
           </div>
-          <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-3">Find your perfect major</h1>
-          <p className="text-slate-500">Answer a few quick questions and we'll suggest majors that match your interests.</p>
+          <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-3">Find your perfect major</h1>
+          <p className="text-muted-foreground">Answer a few quick questions and we'll suggest majors that match your interests.</p>
         </div>
 
         {/* Progress bar */}
-        <div className="w-full bg-slate-200 rounded-full h-1.5 mb-8 overflow-hidden">
+        <div className="w-full bg-border rounded-full h-1.5 mb-8 overflow-hidden">
           <div
-            className="bg-slate-900 h-1.5 rounded-full transition-all duration-500"
+            className="bg-primary h-1.5 rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
 
         {/* Question card */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 animate-in fade-in slide-in-from-bottom-4 duration-400">
+        <div className="bg-card rounded-3xl border border-border shadow-sm p-8 animate-in fade-in slide-in-from-bottom-4 duration-400">
           <div className="text-4xl mb-4 text-center">{question.emoji}</div>
-          <h2 className="text-xl font-serif font-bold text-slate-900 text-center mb-6">{question.question}</h2>
+          <h2 className="text-xl font-serif font-bold text-foreground text-center mb-6">{question.question}</h2>
           <div className="space-y-3">
             {question.options.map((opt) => (
               <button
@@ -649,8 +684,8 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
                 onClick={() => setSelected(opt.value)}
                 className={`w-full text-left px-5 py-3.5 rounded-xl border text-sm font-medium transition-all ${
                   selected === opt.value
-                    ? "bg-slate-900 border-slate-900 text-white"
-                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                    ? "bg-primary border-primary text-primary-foreground"
+                    : "bg-card border-border text-foreground hover:border-muted-foreground hover:bg-muted"
                 }`}
               >
                 {opt.label}
@@ -664,15 +699,15 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
           <button
             onClick={handleBack}
             disabled={step === 0}
-            className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="w-4 h-4" /> Back
           </button>
-          <span className="text-sm text-slate-400 font-medium">{step + 1} / {questions.length}</span>
+          <span className="text-sm text-muted-foreground font-medium">{step + 1} / {questions.length}</span>
           <button
             onClick={handleNext}
             disabled={!selected}
-            className="flex items-center gap-1.5 bg-slate-900 text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {isLast ? "See Results" : "Next"} <ChevronRight className="w-4 h-4" />
           </button>
@@ -685,30 +720,30 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
 // ─── Quiz Results splash ──────────────────────────────────────────────
 function QuizResults({ majors, onExplore, onDismiss }: { majors: MajorSuggestion[]; onExplore: (major: string) => void; onDismiss: () => void }) {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg text-center">
         <div className="text-5xl mb-5">🎉</div>
-        <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-3">Your top matches!</h1>
-        <p className="text-slate-500 mb-8">Based on your interests, here are the majors we think you'll love — and why. Click one to explore it.</p>
+        <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-3">Your top matches!</h1>
+        <p className="text-muted-foreground mb-8">Based on your interests, here are the majors we think you'll love — and why. Click one to explore it.</p>
         <div className="space-y-3 mb-8">
           {majors.map((item, i) => (
             <button
               key={item.major}
               onClick={() => onExplore(item.major)}
-              className="w-full flex items-start gap-4 bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-slate-400 hover:shadow-md transition-all group"
+              className="w-full flex items-start gap-4 bg-card border border-border rounded-2xl p-5 text-left hover:border-muted-foreground hover:shadow-md transition-all group"
             >
-              <span className="w-10 h-10 rounded-xl bg-slate-900 text-white font-serif font-bold text-lg flex items-center justify-center flex-shrink-0">
+              <span className="w-10 h-10 rounded-xl bg-primary text-primary-foreground font-serif font-bold text-lg flex items-center justify-center flex-shrink-0">
                 {i + 1}
               </span>
               <span className="flex-1 min-w-0">
-                <span className="block font-serif font-bold text-slate-900 text-lg">{item.major}</span>
-                {item.reason && <span className="block text-sm text-slate-500 mt-1 leading-relaxed">{item.reason}</span>}
+                <span className="block font-serif font-bold text-foreground text-lg">{item.major}</span>
+                {item.reason && <span className="block text-sm text-muted-foreground mt-1 leading-relaxed">{item.reason}</span>}
               </span>
-              <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-700 transition-colors flex-shrink-0 mt-2.5" />
+              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
             </button>
           ))}
         </div>
-        <button onClick={onDismiss} className="text-sm text-slate-400 hover:text-slate-700 transition-colors underline underline-offset-2">
+        <button onClick={onDismiss} className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
           Skip and explore on my own
         </button>
       </div>
@@ -726,29 +761,29 @@ function CurriculumModal({ college, major, onClose }: { college: College; major:
     { bg: "bg-blue-50", border: "border-blue-100", badge: "bg-blue-100 text-blue-800", dot: "bg-blue-400" },
     { bg: "bg-indigo-50", border: "border-indigo-100", badge: "bg-indigo-100 text-indigo-800", dot: "bg-indigo-400" },
     { bg: "bg-violet-50", border: "border-violet-100", badge: "bg-violet-100 text-violet-800", dot: "bg-violet-400" },
-    { bg: "bg-slate-50", border: "border-slate-200", badge: "bg-slate-900 text-white", dot: "bg-slate-600" },
+    { bg: "bg-background", border: "border-border", badge: "bg-primary text-primary-foreground", dot: "bg-muted-foreground" },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-      <div className="relative z-10 w-full md:max-w-2xl max-h-[90vh] bg-white md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-400" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between p-6 md:p-8 border-b border-slate-100 flex-shrink-0">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative z-10 w-full md:max-w-2xl max-h-[90vh] bg-card md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-400" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between p-6 md:p-8 border-b border-border flex-shrink-0">
           <div className="flex-1 min-w-0 pr-4">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{major}</span>
-            <h2 className="text-xl md:text-2xl font-serif font-bold text-slate-900 leading-tight mt-1">{college.name}</h2>
-            <div className="flex items-center text-slate-500 mt-1 text-sm"><MapPin className="w-3.5 h-3.5 mr-1" />{college.location}</div>
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{major}</span>
+            <h2 className="text-xl md:text-2xl font-serif font-bold text-foreground leading-tight mt-1">{college.name}</h2>
+            <div className="flex items-center text-muted-foreground mt-1 text-sm"><MapPin className="w-3.5 h-3.5 mr-1" />{college.location}</div>
           </div>
-          <button onClick={onClose} className="flex-shrink-0 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"><X className="w-4 h-4 text-slate-600" /></button>
+          <button onClick={onClose} className="flex-shrink-0 w-9 h-9 rounded-full bg-muted hover:bg-muted flex items-center justify-center transition-colors"><X className="w-4 h-4 text-muted-foreground" /></button>
         </div>
         <div className="overflow-y-auto flex-1 p-6 md:p-8">
           {getCurriculum.isPending && (
             <div className="space-y-6 animate-pulse">
               {[1,2,3,4].map((i) => (
-                <div key={i} className="rounded-2xl border border-slate-100 p-5 space-y-3">
-                  <div className="h-5 bg-slate-100 rounded w-32" />
-                  <div className="h-4 bg-slate-100 rounded w-3/4" />
-                  {[1,2,3].map((j) => <div key={j} className="h-4 bg-slate-100 rounded w-full" />)}
+                <div key={i} className="rounded-2xl border border-border p-5 space-y-3">
+                  <div className="h-5 bg-muted rounded w-32" />
+                  <div className="h-4 bg-muted rounded w-3/4" />
+                  {[1,2,3].map((j) => <div key={j} className="h-4 bg-muted rounded w-full" />)}
                 </div>
               ))}
             </div>
@@ -756,12 +791,12 @@ function CurriculumModal({ college, major, onClose }: { college: College; major:
           {getCurriculum.isError && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
-              <p className="text-slate-700 font-medium">Could not load the curriculum.</p>
+              <p className="text-foreground font-medium">Could not load the curriculum.</p>
             </div>
           )}
           {!getCurriculum.isPending && !getCurriculum.isError && curriculum && (
             <div className="space-y-5 animate-in fade-in duration-500">
-              <p className="text-sm text-slate-500 font-medium">4-Year Course Plan</p>
+              <p className="text-sm text-muted-foreground font-medium">4-Year Course Plan</p>
               {curriculum.years.map((year, idx) => {
                 const c = yearColors[idx] || yearColors[0];
                 return (
@@ -769,14 +804,14 @@ function CurriculumModal({ college, major, onClose }: { college: College; major:
                     <div className="flex items-center gap-3 mb-2">
                       <span className={`text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${c.badge}`}>{year.label}</span>
                     </div>
-                    <p className="text-slate-600 text-sm mb-4 leading-relaxed">{year.focus}</p>
+                    <p className="text-muted-foreground text-sm mb-4 leading-relaxed">{year.focus}</p>
                     <ul className="space-y-3">
                       {year.courses.map((course, cIdx) => (
                         <li key={cIdx} className="flex gap-3">
                           <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${c.dot}`} />
                           <div>
-                            <span className="font-semibold text-slate-900 text-sm">{course.name}</span>
-                            <span className="text-slate-500 text-sm"> — {course.description}</span>
+                            <span className="font-semibold text-foreground text-sm">{course.name}</span>
+                            <span className="text-muted-foreground text-sm"> — {course.description}</span>
                           </div>
                         </li>
                       ))}
@@ -795,10 +830,11 @@ function CurriculumModal({ college, major, onClose }: { college: College; major:
 // ─── Saved View ───────────────────────────────────────────────────────
 type SortMode = "rank" | "alpha";
 
-function SavedView({ saved, onUnsaveMajor, onUnsaveCollege }: {
+function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
   saved: SavedData;
   onUnsaveMajor: (majorName: string) => void;
   onUnsaveCollege: (majorName: string, collegeName: string) => void;
+  userGpa: number | null;
 }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [sortMode, setSortMode] = useState<Record<string, SortMode>>({});
@@ -814,11 +850,11 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege }: {
   if (majors.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center px-4">
-        <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-5">
-          <Bookmark className="w-8 h-8 text-slate-400" />
+        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-5">
+          <Bookmark className="w-8 h-8 text-muted-foreground" />
         </div>
-        <h3 className="text-xl font-serif text-slate-800 font-bold mb-2">No saved items yet</h3>
-        <p className="text-slate-500 max-w-sm">Search for a major and click "Save Major" to bookmark it here.</p>
+        <h3 className="text-xl font-serif text-foreground font-bold mb-2">No saved items yet</h3>
+        <p className="text-muted-foreground max-w-sm">Search for a major and click "Save Major" to bookmark it here.</p>
       </div>
     );
   }
@@ -826,8 +862,8 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege }: {
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-10">
       <div className="mb-8">
-        <h2 className="text-3xl font-serif font-bold text-slate-900">Saved</h2>
-        <p className="text-slate-500 mt-1">{majors.length} saved {majors.length === 1 ? "major" : "majors"}</p>
+        <h2 className="text-3xl font-serif font-bold text-foreground">Saved</h2>
+        <p className="text-muted-foreground mt-1">{majors.length} saved {majors.length === 1 ? "major" : "majors"}</p>
       </div>
       <div className="space-y-4">
         {majors.map((item) => {
@@ -835,47 +871,50 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege }: {
           const mode = getSortMode(item.majorName);
           const colleges = sortedColleges(item.colleges, mode);
           return (
-            <div key={item.majorName} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div key={item.majorName} className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
               <div className="flex items-center gap-3 p-5 md:p-6">
                 <button onClick={() => toggleExpand(item.majorName)} className="flex-1 flex items-center gap-3 text-left min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center flex-shrink-0">
-                    <GraduationCap className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
+                    <GraduationCap className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-serif font-bold text-slate-900 text-lg leading-tight">{item.majorName}</h3>
-                    <p className="text-slate-500 text-sm mt-0.5">{item.colleges.length} saved {item.colleges.length === 1 ? "college" : "colleges"}</p>
+                    <h3 className="font-serif font-bold text-foreground text-lg leading-tight">{item.majorName}</h3>
+                    <p className="text-muted-foreground text-sm mt-0.5">{item.colleges.length} saved {item.colleges.length === 1 ? "college" : "colleges"}</p>
                   </div>
-                  {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+                  {isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
                 </button>
-                <button onClick={() => onUnsaveMajor(item.majorName)} className="w-9 h-9 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors flex-shrink-0" title="Remove major">
+                <button onClick={() => onUnsaveMajor(item.majorName)} className="w-9 h-9 rounded-full hover:bg-red-50 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0" title="Remove major">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
               {isOpen && item.description && (
                 <div className="px-5 md:px-6 pb-4 -mt-2">
-                  <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">{item.description}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{item.description}</p>
                 </div>
               )}
               {isOpen && (
-                <div className="border-t border-slate-100">
+                <div className="border-t border-border">
                   {item.colleges.length > 0 ? (
                     <>
-                      <div className="flex items-center justify-between px-5 md:px-6 py-3 bg-slate-50">
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Saved Colleges</span>
-                        <button onClick={() => toggleSort(item.majorName)} className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors">
+                      <div className="flex items-center justify-between px-5 md:px-6 py-3 bg-background">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Saved Colleges</span>
+                        <button onClick={() => toggleSort(item.majorName)} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
                           <SortAsc className="w-3.5 h-3.5" />
                           {mode === "rank" ? "By Rank" : "A–Z"}
                         </button>
                       </div>
-                      <ul className="divide-y divide-slate-100">
+                      <ul className="divide-y divide-border">
                         {colleges.map((college) => (
-                          <li key={college.name} className="flex items-center gap-3 px-5 md:px-6 py-3.5 hover:bg-slate-50 transition-colors">
-                            <span className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center flex-shrink-0">#{college.rank}</span>
+                          <li key={college.name} className="flex items-center gap-3 px-5 md:px-6 py-3.5 hover:bg-muted transition-colors">
+                            <span className="w-7 h-7 rounded-lg bg-muted text-muted-foreground text-xs font-bold flex items-center justify-center flex-shrink-0">#{college.rank}</span>
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-slate-900 text-sm truncate">{college.name}</p>
-                              <p className="text-slate-500 text-xs">{college.location}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-foreground text-sm truncate">{college.name}</p>
+                                <CollegeFitBadge userGpa={userGpa} admissionsProfile={college.admissionsProfile} className="flex-shrink-0" />
+                              </div>
+                              <p className="text-muted-foreground text-xs">{college.location}</p>
                             </div>
-                            <button onClick={() => onUnsaveCollege(item.majorName, college.name)} className="w-7 h-7 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors flex-shrink-0" title="Remove">
+                            <button onClick={() => onUnsaveCollege(item.majorName, college.name)} className="w-7 h-7 rounded-full hover:bg-red-50 flex items-center justify-center text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0" title="Remove">
                               <X className="w-3.5 h-3.5" />
                             </button>
                           </li>
@@ -883,7 +922,7 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege }: {
                       </ul>
                     </>
                   ) : (
-                    <p className="px-5 md:px-6 py-4 text-sm text-slate-400 italic">No colleges saved for this major yet.</p>
+                    <p className="px-5 md:px-6 py-4 text-sm text-muted-foreground italic">No colleges saved for this major yet.</p>
                   )}
                 </div>
               )}
@@ -896,9 +935,10 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege }: {
 }
 
 // ─── My Colleges View ────────────────────────────────────────────────
-function MyCollegesView({ myColleges, onRemove }: {
+function MyCollegesView({ myColleges, onRemove, userGpa }: {
   myColleges: MyCollege[];
   onRemove: (collegeName: string, majorName: string) => void;
+  userGpa: number | null;
 }) {
   const [sortMode, setSortMode] = useState<Record<string, SortMode>>({});
 
@@ -916,11 +956,11 @@ function MyCollegesView({ myColleges, onRemove }: {
   if (totalColleges === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center px-4">
-        <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-5">
-          <GraduationCap className="w-8 h-8 text-slate-400" />
+        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-5">
+          <GraduationCap className="w-8 h-8 text-muted-foreground" />
         </div>
-        <h3 className="text-xl font-serif text-slate-800 font-bold mb-2">No colleges saved yet</h3>
-        <p className="text-slate-500 max-w-sm">Browse majors and bookmark colleges to "My Colleges" using the save button on each college card.</p>
+        <h3 className="text-xl font-serif text-foreground font-bold mb-2">No colleges saved yet</h3>
+        <p className="text-muted-foreground max-w-sm">Browse majors and bookmark colleges to "My Colleges" using the save button on each college card.</p>
       </div>
     );
   }
@@ -928,42 +968,45 @@ function MyCollegesView({ myColleges, onRemove }: {
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-10">
       <div className="mb-8">
-        <h2 className="text-3xl font-serif font-bold text-slate-900">My Colleges</h2>
-        <p className="text-slate-500 mt-1">{totalColleges} saved {totalColleges === 1 ? "college" : "colleges"}</p>
+        <h2 className="text-3xl font-serif font-bold text-foreground">My Colleges</h2>
+        <p className="text-muted-foreground mt-1">{totalColleges} saved {totalColleges === 1 ? "college" : "colleges"}</p>
       </div>
       <div className="space-y-6">
         {groups.map(([majorName, colleges]) => {
           const mode = getSortMode(majorName);
           const sorted = mode === "alpha" ? [...colleges].sort((a, b) => a.name.localeCompare(b.name)) : [...colleges].sort((a, b) => a.rank - b.rank);
           return (
-            <div key={majorName} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="flex items-center justify-between px-5 md:px-6 py-4 bg-slate-50 border-b border-slate-100">
+            <div key={majorName} className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between px-5 md:px-6 py-4 bg-background border-b border-border">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
-                    <GraduationCap className="w-4 h-4 text-white" />
+                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+                    <GraduationCap className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div>
-                    <h3 className="font-serif font-bold text-slate-900 text-base leading-tight">{majorName}</h3>
-                    <p className="text-slate-500 text-xs">{colleges.length} {colleges.length === 1 ? "college" : "colleges"}</p>
+                    <h3 className="font-serif font-bold text-foreground text-base leading-tight">{majorName}</h3>
+                    <p className="text-muted-foreground text-xs">{colleges.length} {colleges.length === 1 ? "college" : "colleges"}</p>
                   </div>
                 </div>
-                <button onClick={() => toggleSort(majorName)} className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors">
+                <button onClick={() => toggleSort(majorName)} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
                   <SortAsc className="w-3.5 h-3.5" />
                   {mode === "rank" ? "By Rank" : "A–Z"}
                 </button>
               </div>
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-border">
                 {sorted.map((college) => (
-                  <li key={`${college.name}-${majorName}`} className="group flex items-center gap-3 px-5 md:px-6 py-3.5 hover:bg-slate-50 transition-colors">
-                    <span className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center flex-shrink-0">#{college.rank}</span>
+                  <li key={`${college.name}-${majorName}`} className="group flex items-center gap-3 px-5 md:px-6 py-3.5 hover:bg-muted transition-colors">
+                    <span className="w-7 h-7 rounded-lg bg-muted text-muted-foreground text-xs font-bold flex items-center justify-center flex-shrink-0">#{college.rank}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900 text-sm truncate">{college.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-foreground text-sm truncate">{college.name}</p>
+                        <CollegeFitBadge userGpa={userGpa} admissionsProfile={college.admissionsProfile} className="flex-shrink-0" />
+                      </div>
                       <div className="flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-slate-400" />
-                        <p className="text-slate-400 text-xs">{college.location}</p>
+                        <MapPin className="w-3 h-3 text-muted-foreground" />
+                        <p className="text-muted-foreground text-xs">{college.location}</p>
                       </div>
                     </div>
-                    <button onClick={() => onRemove(college.name, majorName)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-slate-300 hover:text-red-400 transition-colors flex-shrink-0" title="Remove">
+                    <button onClick={() => onRemove(college.name, majorName)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0" title="Remove">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </li>
@@ -977,13 +1020,146 @@ function MyCollegesView({ myColleges, onRemove }: {
   );
 }
 
+// ─── College fit (Reach / Match / Safety) ─────────────────────────────
+type FitTier = "safety" | "match" | "reach";
+
+// Fallback GPA bands by selectivity tier, used only when a college has no
+// explicit admitted-GPA range. Unweighted 4.0 scale.
+const TIER_GPA_BANDS: Record<string, { low: number; high: number }> = {
+  most_selective: { low: 3.9, high: 4.0 },
+  highly_selective: { low: 3.7, high: 3.95 },
+  selective: { low: 3.3, high: 3.8 },
+  accessible: { low: 2.5, high: 3.3 },
+};
+
+function computeFit(userGpa: number | null, ap: College["admissionsProfile"]): FitTier | null {
+  if (userGpa == null || !ap) return null;
+  const band = TIER_GPA_BANDS[ap.selectivityTier];
+  const low = ap.gpaLow ?? band?.low;
+  const high = ap.gpaHigh ?? band?.high;
+  if (low == null || high == null) return null;
+  if (userGpa >= high) return "safety";
+  if (userGpa >= low) return "match";
+  return "reach";
+}
+
+const FIT_BADGE: Record<FitTier, { label: string; cls: string }> = {
+  safety: { label: "Safety", cls: "bg-emerald-100 text-emerald-700 ring-emerald-200" },
+  match: { label: "Match", cls: "bg-amber-100 text-amber-700 ring-amber-200" },
+  reach: { label: "Reach", cls: "bg-rose-100 text-rose-700 ring-rose-200" },
+};
+
+function CollegeFitBadge({ userGpa, admissionsProfile, className = "" }: {
+  userGpa: number | null;
+  admissionsProfile: College["admissionsProfile"];
+  className?: string;
+}) {
+  const fit = computeFit(userGpa, admissionsProfile);
+  if (!fit) return null;
+  const { label, cls } = FIT_BADGE[fit];
+  return (
+    <span
+      title="Estimated fit based on your GPA vs the college's typical admitted GPA range. A rough guide, not a prediction."
+      className={`inline-flex items-center text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ring-1 ${cls} ${className}`}
+      data-testid={`badge-fit-${fit}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+// ─── Currency + Career stats (real BLS data) ──────────────────────────
+function formatUSD(value: number): string {
+  return `$${Math.round(value).toLocaleString("en-US")}`;
+}
+
+function CareerStats({ career }: { career: CareerInfo | null }) {
+  if (!career) {
+    return (
+      <div className="relative z-10 border-t border-border pt-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Briefcase className="w-4 h-4 text-muted-foreground" />
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Career Outlook</span>
+        </div>
+        <p className="text-sm text-muted-foreground" data-testid="text-career-unavailable">
+          We don't have official labor-statistics data matched to this major yet. Try a closely related field to see salary and job-growth figures.
+        </p>
+      </div>
+    );
+  }
+
+  const growthPositive = career.projectedGrowthPct >= 0;
+
+  return (
+    <div className="relative z-10 border-t border-border pt-6" data-testid="section-career-stats">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-2">
+          <Briefcase className="w-4 h-4 text-muted-foreground" />
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Career Outlook</span>
+        </div>
+        <span className="text-xs font-medium text-muted-foreground">Typical career: {career.occupation}</span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div className="bg-background rounded-xl p-4 text-center">
+          <p className="text-xs text-muted-foreground mb-1 font-medium">Entry (10th pct)</p>
+          <p className="text-lg font-bold text-foreground" data-testid="text-wage-entry">{formatUSD(career.annualEntryWage)}</p>
+        </div>
+        <div className="bg-indigo-50 rounded-xl p-4 text-center ring-1 ring-indigo-100">
+          <p className="text-xs text-indigo-400 mb-1 font-medium">Median</p>
+          <p className="text-lg font-bold text-indigo-700" data-testid="text-wage-median">{formatUSD(career.annualMedianWage)}</p>
+        </div>
+        <div className="bg-background rounded-xl p-4 text-center">
+          <p className="text-xs text-muted-foreground mb-1 font-medium">Experienced (90th pct)</p>
+          <p className="text-lg font-bold text-foreground" data-testid="text-wage-experienced">{formatUSD(career.annualExperiencedWage)}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <div className="flex items-center gap-3 bg-background rounded-xl p-4">
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${growthPositive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+            <TrendingUp className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground font-medium">Projected job growth</p>
+            <p className="text-base font-bold text-foreground" data-testid="text-growth">
+              {growthPositive ? "+" : ""}{career.projectedGrowthPct}%{" "}
+              <span className="text-xs font-normal text-muted-foreground">· {career.growthDataPeriod}</span>
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 bg-background rounded-xl p-4">
+          <div className="w-9 h-9 rounded-lg bg-border text-foreground flex items-center justify-center flex-shrink-0">
+            <Award className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground font-medium">Typical entry-level education</p>
+            <p className="text-base font-bold text-foreground" data-testid="text-education">{career.typicalEducation}</p>
+          </div>
+        </div>
+      </div>
+
+      <a
+        href={career.sourceUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-muted-foreground transition-colors"
+      >
+        <ExternalLink className="w-3 h-3" />
+        Source: {career.sourceName} · Wages {career.wageDataYear}
+      </a>
+    </div>
+  );
+}
+
 // ─── Explore View ──────────────────────────────────────────────────────
-function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor }: {
+function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor, userGpa }: {
   saved: SavedData;
   setSaved: (d: SavedData) => void;
   myColleges: MyCollege[];
   setMyColleges: (d: MyCollege[]) => void;
   initialMajor?: string;
+  userGpa: number | null;
 }) {
   const [inputValue, setInputValue] = useState(initialMajor || "");
   const [currentMajor, setCurrentMajor] = useState(initialMajor || "");
@@ -1080,15 +1256,15 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor 
   return (
     <main className="flex-1 flex flex-col items-center pt-14 md:pt-20 px-4 pb-24">
       <div className="w-full max-w-3xl flex flex-col items-center text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif text-slate-900 font-bold mb-5 leading-tight">Discover your academic path.</h1>
-        <p className="text-lg text-slate-600 max-w-2xl mb-8">Explore college majors, understand their focus, and discover the top universities renowned for these programs.</p>
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif text-foreground font-bold mb-5 leading-tight">Discover your academic path.</h1>
+        <p className="text-lg text-muted-foreground max-w-2xl mb-8">Explore college majors, understand their focus, and discover the top universities renowned for these programs.</p>
         <div className="w-full max-w-2xl relative flex items-center group">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
+            <Search className="h-5 w-5 text-muted-foreground group-focus-within:text-muted-foreground transition-colors" />
           </div>
           <input
             type="text"
-            className="block w-full pl-12 pr-32 py-4 md:py-5 border border-slate-200 rounded-full text-lg shadow-sm focus:ring-2 focus:ring-slate-800 focus:border-slate-800 transition-all bg-white text-slate-900 placeholder-slate-400"
+            className="block w-full pl-12 pr-32 py-4 md:py-5 border border-border rounded-full text-lg shadow-sm focus:ring-2 focus:ring-ring focus:border-ring transition-all bg-card text-foreground placeholder:text-muted-foreground"
             placeholder="e.g. Finance, Computer Science, Nursing..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -1096,8 +1272,8 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor 
             data-testid="input-major"
           />
           <div className="absolute inset-y-0 right-2 flex items-center">
-            <button onClick={handleSearch} disabled={isLoading} className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-full font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2" data-testid="button-search">
-              {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Explore"}
+            <button onClick={handleSearch} disabled={isLoading} className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2.5 rounded-full font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2" data-testid="button-search">
+              {isLoading ? <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-white rounded-full animate-spin" /> : "Explore"}
             </button>
           </div>
         </div>
@@ -1106,11 +1282,11 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor 
       <div className="w-full max-w-4xl">
         {isIdle && (
           <div className="flex flex-col items-center justify-center animate-in fade-in duration-500 delay-300 fill-mode-both">
-            <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Popular Majors</p>
-            <p className="text-xs text-slate-400 mb-4">Top fields by U.S. bachelor's degrees awarded · NCES 2021–22</p>
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Popular Majors</p>
+            <p className="text-xs text-muted-foreground mb-4">Top fields by U.S. bachelor's degrees awarded · NCES 2021–22</p>
             <div className="flex flex-wrap justify-center gap-3">
               {POPULAR_MAJORS.map((major) => (
-                <button key={major} onClick={() => setSuggestedMajor(major)} className="px-5 py-2.5 bg-white border border-slate-200 rounded-full text-slate-700 hover:border-slate-400 hover:shadow-sm transition-all">{major}</button>
+                <button key={major} onClick={() => setSuggestedMajor(major)} className="px-5 py-2.5 bg-card border border-border rounded-full text-foreground hover:border-muted-foreground hover:shadow-sm transition-all">{major}</button>
               ))}
             </div>
           </div>
@@ -1118,19 +1294,19 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor 
 
         {isLoading && (
           <div className="w-full animate-in fade-in duration-300">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 md:p-12 mb-8 animate-pulse">
-              <div className="h-10 bg-slate-100 rounded w-1/3 mb-6" />
-              <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-4 bg-slate-100 rounded" style={{ width: `${85+(i*3)}%` }} />)}</div>
+            <div className="bg-card rounded-2xl shadow-sm border border-border p-8 md:p-12 mb-8 animate-pulse">
+              <div className="h-10 bg-muted rounded w-1/3 mb-6" />
+              <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-4 bg-muted rounded" style={{ width: `${85+(i*3)}%` }} />)}</div>
             </div>
             <div className="space-y-4">
-              <div className="h-8 bg-slate-100 rounded w-48 mb-2 animate-pulse" />
+              <div className="h-8 bg-muted rounded w-48 mb-2 animate-pulse" />
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex gap-6 animate-pulse">
-                  <div className="w-12 h-12 bg-slate-100 rounded-lg flex-shrink-0" />
+                <div key={i} className="bg-card rounded-xl shadow-sm border border-border p-6 flex gap-6 animate-pulse">
+                  <div className="w-12 h-12 bg-muted rounded-lg flex-shrink-0" />
                   <div className="flex-1 space-y-3">
-                    <div className="h-5 bg-slate-100 rounded w-1/3" />
-                    <div className="h-4 bg-slate-100 rounded w-1/4" />
-                    <div className="h-4 bg-slate-100 rounded w-3/4" />
+                    <div className="h-5 bg-muted rounded w-1/3" />
+                    <div className="h-4 bg-muted rounded w-1/4" />
+                    <div className="h-4 bg-muted rounded w-3/4" />
                   </div>
                 </div>
               ))}
@@ -1148,51 +1324,27 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor 
 
         {!isLoading && !isError && result && (
           <div className="w-full animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 md:p-12 mb-10 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-50 pointer-events-none" />
+            <div className="bg-card rounded-3xl shadow-sm border border-border p-8 md:p-12 mb-10 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-background rounded-full blur-3xl -mr-32 -mt-32 opacity-50 pointer-events-none" />
               <div className="flex items-start justify-between gap-4 mb-5 relative z-10">
-                <h2 className="text-3xl md:text-4xl font-serif text-slate-900 font-bold leading-tight">{result.major}</h2>
+                <h2 className="text-3xl md:text-4xl font-serif text-foreground font-bold leading-tight">{result.major}</h2>
                 <button
                   onClick={isMajorSaved(result.major) ? unsaveMajor : saveMajor}
-                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all ${isMajorSaved(result.major) ? "bg-slate-900 border-slate-900 text-white hover:bg-slate-700" : "bg-white border-slate-200 text-slate-600 hover:border-slate-400 hover:text-slate-900"}`}
+                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all ${isMajorSaved(result.major) ? "bg-primary border-primary text-primary-foreground hover:bg-primary/90" : "bg-card border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground"}`}
                   data-testid="button-save-major"
                 >
                   {isMajorSaved(result.major) ? <><BookmarkCheck className="w-4 h-4" /> Saved</> : <><Bookmark className="w-4 h-4" /> Save Major</>}
                 </button>
               </div>
-              <p className="text-lg leading-relaxed text-slate-700 relative z-10 mb-8" data-testid="text-major-description">{result.description}</p>
-              {result.salary && (
-                <div className="relative z-10 border-t border-slate-100 pt-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <DollarSign className="w-4 h-4 text-slate-500" />
-                    <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Average Salaries</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-slate-50 rounded-xl p-4 text-center">
-                      <p className="text-xs text-slate-400 mb-1 font-medium">Entry Level</p>
-                      <p className="text-lg font-bold text-slate-800">{result.salary.entryLevel}</p>
-                      <p className="text-xs text-slate-400 mt-1">0–2 years</p>
-                    </div>
-                    <div className="bg-indigo-50 rounded-xl p-4 text-center ring-1 ring-indigo-100">
-                      <p className="text-xs text-indigo-400 mb-1 font-medium">Mid-Career</p>
-                      <p className="text-lg font-bold text-indigo-700">{result.salary.midCareer}</p>
-                      <p className="text-xs text-indigo-300 mt-1">5–10 years</p>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl p-4 text-center">
-                      <p className="text-xs text-slate-400 mb-1 font-medium">Experienced</p>
-                      <p className="text-lg font-bold text-slate-800">{result.salary.experienced}</p>
-                      <p className="text-xs text-slate-400 mt-1">15+ years</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <p className="text-lg leading-relaxed text-foreground relative z-10 mb-8" data-testid="text-major-description">{result.description}</p>
+              <CareerStats career={result.career} />
             </div>
 
             <div className="mb-4 flex items-center gap-2">
-              <GraduationCap className="w-6 h-6 text-slate-800" />
-              <h3 className="text-2xl font-serif text-slate-900 font-bold">Top Colleges</h3>
+              <GraduationCap className="w-6 h-6 text-foreground" />
+              <h3 className="text-2xl font-serif text-foreground font-bold">Top Colleges</h3>
             </div>
-            <p className="text-sm text-slate-500 mb-6">Click a college to see its 4-year course plan. Use the bookmark to save it to a list.</p>
+            <p className="text-sm text-muted-foreground mb-6">Click a college to see its 4-year course plan. Use the bookmark to save it to a list.</p>
 
             <div ref={dropdownRef} className="space-y-4" data-testid="list-top-colleges">
               {result.topColleges.map((college, index) => {
@@ -1205,56 +1357,59 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor 
                 return (
                   <div
                     key={college.rank}
-                    className={`bg-white rounded-2xl border border-slate-200 transition-all duration-200 hover:shadow-md hover:border-slate-300 group animate-in fade-in slide-in-from-bottom-4 stagger-${index+1} fill-mode-both`}
+                    className={`bg-card rounded-2xl border border-border transition-all duration-200 hover:shadow-md hover:border-muted-foreground group animate-in fade-in slide-in-from-bottom-4 stagger-${index+1} fill-mode-both`}
                     data-testid={`item-college-${college.rank}`}
                   >
                     <div className="flex gap-4 md:gap-6 p-5 md:p-6">
                       <div className="flex-shrink-0">
-                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-slate-50 text-slate-800 font-serif font-bold text-xl md:text-2xl flex items-center justify-center border border-slate-100 shadow-sm">
+                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-background text-foreground font-serif font-bold text-xl md:text-2xl flex items-center justify-center border border-border shadow-sm">
                           #{college.rank}
                         </div>
                       </div>
                       <button className="flex-1 min-w-0 text-left" onClick={() => { setOpenDropdown(null); setSelectedCollege(college); }}>
-                        <h4 className="text-xl font-bold text-slate-900 mb-1 group-hover:text-slate-700 transition-colors">{college.name}</h4>
-                        <div className="flex items-center text-slate-500 mb-3 text-sm font-medium">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <h4 className="text-xl font-bold text-foreground group-hover:text-foreground transition-colors">{college.name}</h4>
+                          <CollegeFitBadge userGpa={userGpa} admissionsProfile={college.admissionsProfile} />
+                        </div>
+                        <div className="flex items-center text-muted-foreground mb-3 text-sm font-medium">
                           <MapPin className="w-4 h-4 mr-1.5 opacity-70" />{college.location}
                         </div>
-                        <p className="text-slate-600 leading-relaxed text-sm md:text-base">{college.highlights}</p>
+                        <p className="text-muted-foreground leading-relaxed text-sm md:text-base">{college.highlights}</p>
                       </button>
-                      <div className="flex-shrink-0 flex flex-col items-center gap-2 pl-2 md:pl-4 md:border-l md:border-slate-100 relative">
+                      <div className="flex-shrink-0 flex flex-col items-center gap-2 pl-2 md:pl-4 md:border-l md:border-border relative">
                         <button
                           onClick={(e) => { e.stopPropagation(); setOpenDropdown(isOpen ? null : dropKey); }}
-                          className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${anySaved ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-200 text-slate-400 hover:border-slate-400 hover:text-slate-700"}`}
+                          className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${anySaved ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground"}`}
                           title="Save to a list"
                           data-testid={`button-save-college-${college.rank}`}
                         >
                           {anySaved ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
                         </button>
                         {isOpen && (
-                          <div className="absolute right-0 top-11 z-30 bg-white border border-slate-200 rounded-2xl shadow-xl w-48 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                            <p className="px-4 pt-3 pb-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Save to</p>
+                          <div className="absolute right-0 top-11 z-30 bg-card border border-border rounded-2xl shadow-xl w-48 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                            <p className="px-4 pt-3 pb-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Save to</p>
                             <button
-                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left"
                               onClick={(e) => { e.stopPropagation(); toggleSavedCollege(college, result.major, result.description); }}
                             >
-                              <div className={`w-5 h-5 rounded flex items-center justify-center border flex-shrink-0 ${inSaved ? "bg-slate-900 border-slate-900" : "border-slate-300"}`}>
-                                {inSaved && <Check className="w-3 h-3 text-white" />}
+                              <div className={`w-5 h-5 rounded flex items-center justify-center border flex-shrink-0 ${inSaved ? "bg-primary border-primary" : "border-border"}`}>
+                                {inSaved && <Check className="w-3 h-3 text-primary-foreground" />}
                               </div>
-                              <span className="text-sm font-medium text-slate-700">Saved</span>
+                              <span className="text-sm font-medium text-foreground">Saved</span>
                             </button>
                             <button
-                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left"
                               onClick={(e) => { e.stopPropagation(); toggleMyCollege(college, result.major); }}
                             >
-                              <div className={`w-5 h-5 rounded flex items-center justify-center border flex-shrink-0 ${inMyColleges ? "bg-slate-900 border-slate-900" : "border-slate-300"}`}>
-                                {inMyColleges && <Check className="w-3 h-3 text-white" />}
+                              <div className={`w-5 h-5 rounded flex items-center justify-center border flex-shrink-0 ${inMyColleges ? "bg-primary border-primary" : "border-border"}`}>
+                                {inMyColleges && <Check className="w-3 h-3 text-primary-foreground" />}
                               </div>
-                              <span className="text-sm font-medium text-slate-700">My Colleges</span>
+                              <span className="text-sm font-medium text-foreground">My Colleges</span>
                             </button>
                             <div className="h-2" />
                           </div>
                         )}
-                        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
                       </div>
                     </div>
                   </div>
@@ -1306,49 +1461,49 @@ function ChatWidget() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 left-4 md:left-6 z-50 w-[calc(100vw-2rem)] max-w-sm flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 bg-slate-900">
-            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-              <Bot className="w-4 h-4 text-white" />
+        <div className="fixed bottom-24 left-4 md:left-6 z-50 w-[calc(100vw-2rem)] max-w-sm flex flex-col bg-card rounded-3xl shadow-2xl border border-border overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-primary">
+            <div className="w-8 h-8 rounded-full bg-primary-foreground/10 flex items-center justify-center">
+              <Bot className="w-4 h-4 text-primary-foreground" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-white text-sm">Sage</p>
-              <p className="text-white/60 text-xs">AI College Advisor</p>
+              <p className="font-semibold text-primary-foreground text-sm">Sage</p>
+              <p className="text-primary-foreground/60 text-xs">AI College Advisor</p>
             </div>
-            <button onClick={() => setOpen(false)} className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
-              <X className="w-3.5 h-3.5 text-white" />
+            <button onClick={() => setOpen(false)} className="w-7 h-7 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 flex items-center justify-center transition-colors">
+              <X className="w-3.5 h-3.5 text-primary-foreground" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-80">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 {msg.role === "assistant" && (
-                  <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center flex-shrink-0 mr-2 mt-0.5">
-                    <Bot className="w-3 h-3 text-white" />
+                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mr-2 mt-0.5">
+                    <Bot className="w-3 h-3 text-primary-foreground" />
                   </div>
                 )}
-                <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${msg.role === "user" ? "bg-slate-900 text-white rounded-br-sm" : "bg-slate-100 text-slate-800 rounded-bl-sm"}`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"}`}>
                   {msg.content}
                 </div>
               </div>
             ))}
             {sendChat.isPending && (
               <div className="flex justify-start">
-                <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center flex-shrink-0 mr-2 mt-0.5">
-                  <Bot className="w-3 h-3 text-white" />
+                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0 mr-2 mt-0.5">
+                  <Bot className="w-3 h-3 text-primary-foreground" />
                 </div>
-                <div className="bg-slate-100 rounded-2xl rounded-bl-sm px-4 py-3">
+                <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
                   <div className="flex gap-1 items-center">
-                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
                 </div>
               </div>
             )}
             <div ref={bottomRef} />
           </div>
-          <div className="px-4 py-3 border-t border-slate-100 flex items-center gap-2">
+          <div className="px-4 py-3 border-t border-border flex items-center gap-2">
             <input
               ref={inputRef}
               type="text"
@@ -1356,16 +1511,16 @@ function ChatWidget() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") send(); }}
               placeholder="Ask Sage anything..."
-              className="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-slate-800 focus:border-slate-800 transition-all placeholder-slate-400"
+              className="flex-1 text-sm bg-background border border-border rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all placeholder:text-muted-foreground"
               disabled={sendChat.isPending}
             />
-            <button onClick={send} disabled={!input.trim() || sendChat.isPending} className="w-9 h-9 rounded-full bg-slate-900 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0">
-              <Send className="w-4 h-4 text-white" />
+            <button onClick={send} disabled={!input.trim() || sendChat.isPending} className="w-9 h-9 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0">
+              <Send className="w-4 h-4 text-primary-foreground" />
             </button>
           </div>
         </div>
       )}
-      <button onClick={() => setOpen((v) => !v)} className="fixed bottom-6 left-4 md:left-6 z-50 w-14 h-14 rounded-full bg-slate-900 hover:bg-slate-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center" aria-label="Chat with Sage">
+      <button onClick={() => setOpen((v) => !v)} className="fixed bottom-6 left-4 md:left-6 z-50 w-14 h-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all flex items-center justify-center" aria-label="Chat with Sage">
         {open ? <X className="w-5 h-5" /> : <MessageCircle className="w-6 h-6" />}
       </button>
     </>
@@ -1394,23 +1549,23 @@ function UserMenu() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 pl-3 pr-4 py-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all"
+        className="flex items-center gap-2 p-1.5 sm:pl-3 sm:pr-4 sm:py-2 rounded-full border border-border bg-card hover:bg-muted hover:border-muted-foreground transition-all"
       >
-        <div className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold">
+        <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">
           {initials || <User className="w-3.5 h-3.5" />}
         </div>
-        <span className="text-sm font-medium text-slate-700 max-w-[100px] truncate">{displayName}</span>
+        <span className="hidden sm:inline text-sm font-medium text-foreground max-w-[100px] truncate">{displayName}</span>
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl w-52 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-          <div className="px-4 py-3 border-b border-slate-100">
-            <p className="text-xs text-slate-400 font-medium">Signed in as</p>
-            <p className="text-sm font-semibold text-slate-900 truncate mt-0.5">{user?.emailAddresses?.[0]?.emailAddress}</p>
+        <div className="absolute right-0 top-12 z-50 bg-card border border-border rounded-2xl shadow-xl w-52 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-xs text-muted-foreground font-medium">Signed in as</p>
+            <p className="text-sm font-semibold text-foreground truncate mt-0.5">{user?.emailAddresses?.[0]?.emailAddress}</p>
           </div>
           <button
             onClick={() => signOut({ redirectUrl: basePath || "/" })}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-red-50 hover:text-red-600 transition-colors text-left"
           >
             <LogOut className="w-4 h-4" />
             Sign out
@@ -1431,9 +1586,9 @@ function SuggestedView({ results, onExplore, onRetake }: {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center px-4">
         <div className="text-5xl mb-5">🎯</div>
-        <h3 className="text-xl font-bold text-slate-800 mb-2">No suggestions yet</h3>
-        <p className="text-slate-500 max-w-sm mb-8">Take the quiz to get personalized major recommendations based on your interests.</p>
-        <button onClick={onRetake} className="flex items-center gap-2 bg-slate-900 text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-slate-700 transition-colors">
+        <h3 className="text-xl font-bold text-foreground mb-2">No suggestions yet</h3>
+        <p className="text-muted-foreground max-w-sm mb-8">Take the quiz to get personalized major recommendations based on your interests.</p>
+        <button onClick={onRetake} className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-6 py-3 rounded-full hover:bg-primary/90 transition-colors">
           <Sparkles className="w-4 h-4" /> Take the Quiz
         </button>
       </div>
@@ -1444,12 +1599,12 @@ function SuggestedView({ results, onExplore, onRetake }: {
     <div className="w-full max-w-3xl mx-auto px-4 py-10">
       <div className="flex items-start justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900">Suggested Majors</h2>
-          <p className="text-slate-500 mt-1">Based on your quiz answers — click any to explore it.</p>
+          <h2 className="text-3xl font-bold text-foreground">Suggested Majors</h2>
+          <p className="text-muted-foreground mt-1">Based on your quiz answers — click any to explore it.</p>
         </div>
         <button
           onClick={onRetake}
-          className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 text-sm font-medium text-slate-600 hover:border-slate-400 hover:text-slate-900 hover:bg-white transition-all bg-white"
+          className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border border-border text-sm font-medium text-muted-foreground hover:border-muted-foreground hover:text-foreground hover:bg-card transition-all bg-card"
         >
           <Sparkles className="w-3.5 h-3.5" /> Retake Quiz
         </button>
@@ -1459,16 +1614,16 @@ function SuggestedView({ results, onExplore, onRetake }: {
           <button
             key={item.major}
             onClick={() => onExplore(item.major)}
-            className="w-full flex items-start gap-4 bg-white border border-slate-200 rounded-2xl p-5 text-left hover:border-slate-400 hover:shadow-md transition-all group"
+            className="w-full flex items-start gap-4 bg-card border border-border rounded-2xl p-5 text-left hover:border-muted-foreground hover:shadow-md transition-all group"
           >
-            <span className="w-10 h-10 rounded-xl bg-slate-900 text-white font-bold text-lg flex items-center justify-center flex-shrink-0 font-sans">
+            <span className="w-10 h-10 rounded-xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center flex-shrink-0 font-sans">
               {i + 1}
             </span>
             <span className="flex-1 min-w-0">
-              <span className="block font-bold text-slate-900 text-lg">{item.major}</span>
-              {item.reason && <span className="block text-sm text-slate-500 mt-1 leading-relaxed">{item.reason}</span>}
+              <span className="block font-bold text-foreground text-lg">{item.major}</span>
+              {item.reason && <span className="block text-sm text-muted-foreground mt-1 leading-relaxed">{item.reason}</span>}
             </span>
-            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-700 transition-colors flex-shrink-0 mt-2.5" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
           </button>
         ))}
       </div>
@@ -1477,13 +1632,346 @@ function SuggestedView({ results, onExplore, onRetake }: {
 }
 
 // ─── App Shell ────────────────────────────────────────────────────────
-type AppView = "explore" | "suggested" | "colleges" | "saved";
+type AppView = "explore" | "suggested" | "careers" | "colleges" | "saved";
+
+// ─── Onboarding & profile (GPA + goals) ───────────────────────────────
+const GOAL_PRESETS = [
+  "Maximize earning potential",
+  "Job stability & growth",
+  "Help people / social impact",
+  "Get into grad or professional school",
+  "Build or create things",
+  "Start my own venture",
+];
+
+function useGpaGoals(initial: UserProfile) {
+  const [gpa, setGpa] = useState(initial.gpa == null ? "" : String(initial.gpa));
+  const [goals, setGoals] = useState(initial.goals);
+  const trimmed = gpa.trim();
+  const gpaNum = trimmed === "" ? null : Number(trimmed);
+  const gpaValid = gpaNum == null || (Number.isFinite(gpaNum) && gpaNum >= 0 && gpaNum <= 4);
+  const profile: UserProfile = { gpa: gpaValid ? gpaNum : null, goals: goals.trim() };
+  return { gpa, setGpa, goals, setGoals, gpaValid, profile };
+}
+
+function GpaGoalsControls({ state }: { state: ReturnType<typeof useGpaGoals> }) {
+  const { gpa, setGpa, goals, setGoals, gpaValid } = state;
+  return (
+    <div className="space-y-5 text-left">
+      <div>
+        <label htmlFor="gpa-input" className="block text-sm font-semibold text-foreground mb-1.5">
+          Your GPA <span className="font-normal text-muted-foreground">(unweighted, 4.0 scale)</span>
+        </label>
+        <input
+          id="gpa-input"
+          type="number"
+          inputMode="decimal"
+          min="0"
+          max="4"
+          step="0.01"
+          value={gpa}
+          onChange={(e) => setGpa(e.target.value)}
+          placeholder="e.g. 3.7"
+          className={`w-full px-4 py-3 rounded-xl border text-sm font-medium outline-none transition-colors ${gpaValid ? "border-border focus:border-primary" : "border-rose-300 focus:border-rose-500"}`}
+          data-testid="input-gpa"
+        />
+        {!gpaValid && <p className="text-xs text-rose-500 mt-1.5">Enter a GPA between 0 and 4.0.</p>}
+        <p className="text-xs text-muted-foreground mt-1.5">Stored only on your device to estimate Reach / Match / Safety. Never sent to our servers.</p>
+      </div>
+      <div>
+        <span className="block text-sm font-semibold text-foreground mb-2">
+          What matters most to you? <span className="font-normal text-muted-foreground">(optional)</span>
+        </span>
+        <div className="flex flex-wrap gap-2 mb-2.5">
+          {GOAL_PRESETS.map((g) => {
+            const active = goals === g;
+            return (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGoals(active ? "" : g)}
+                className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${active ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border text-muted-foreground hover:border-muted-foreground"}`}
+              >
+                {g}
+              </button>
+            );
+          })}
+        </div>
+        <textarea
+          value={goals}
+          onChange={(e) => setGoals(e.target.value)}
+          rows={2}
+          placeholder="Or describe your goals in your own words…"
+          className="w-full px-4 py-3 rounded-xl border border-border text-sm outline-none focus:border-primary transition-colors resize-none"
+          data-testid="input-goals"
+        />
+      </div>
+    </div>
+  );
+}
+
+function OnboardingProfile({ initial, onComplete, onSkip }: {
+  initial: UserProfile;
+  onComplete: (p: UserProfile) => void;
+  onSkip: () => void;
+}) {
+  const state = useGpaGoals(initial);
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-lg">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
+            <Sparkles className="w-3.5 h-3.5" /> One last thing
+          </div>
+          <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-3">Personalize your college fit</h1>
+          <p className="text-muted-foreground">Add your GPA and we'll flag every college as a Reach, Match, or Safety. You can change this anytime.</p>
+        </div>
+        <div className="bg-card rounded-3xl border border-border shadow-sm p-8">
+          <GpaGoalsControls state={state} />
+          <button
+            onClick={() => onComplete(state.profile)}
+            disabled={!state.gpaValid}
+            className="w-full mt-6 flex items-center justify-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-6 py-3 rounded-full hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            data-testid="button-save-profile"
+          >
+            Continue <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="text-center mt-6">
+          <button onClick={onSkip} className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2" data-testid="button-skip-profile">
+            Skip for now
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileSettingsModal({ initial, onSave, onClose }: {
+  initial: UserProfile;
+  onSave: (p: UserProfile) => void;
+  onClose: () => void;
+}) {
+  const state = useGpaGoals(initial);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="bg-card rounded-3xl border border-border shadow-2xl w-full max-w-md p-7 animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl font-serif font-bold text-foreground">Your profile</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors" title="Close">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <GpaGoalsControls state={state} />
+        <div className="flex items-center gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-full border border-border text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={() => { onSave(state.profile); onClose(); }}
+            disabled={!state.gpaValid}
+            className="flex-1 px-4 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            data-testid="button-save-profile-settings"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Browse Careers ───────────────────────────────────────────────────
+const DEGREE_ORDER = [
+  "No formal educational credential",
+  "High school diploma or equivalent",
+  "Postsecondary nondegree award",
+  "Some college, no degree",
+  "Associate's degree",
+  "Bachelor's degree",
+  "Master's degree",
+  "Doctoral or professional degree",
+];
+const WAGE_OPTIONS = [
+  { label: "Any salary", value: 0 },
+  { label: "$40k+", value: 40000 },
+  { label: "$60k+", value: 60000 },
+  { label: "$80k+", value: 80000 },
+  { label: "$100k+", value: 100000 },
+  { label: "$120k+", value: 120000 },
+];
+const GROWTH_OPTIONS = [
+  { label: "Any growth", value: -100 },
+  { label: "0%+ (stable)", value: 0 },
+  { label: "5%+", value: 5 },
+  { label: "10%+ (fast)", value: 10 },
+  { label: "20%+ (much faster)", value: 20 },
+];
+
+function CareersView() {
+  const { data: careers, isLoading, isError, refetch, isFetching } = useGetCareers();
+  const [search, setSearch] = useState("");
+  const [minWage, setMinWage] = useState(0);
+  const [minGrowth, setMinGrowth] = useState(-100);
+  const [degree, setDegree] = useState("any");
+
+  const degreeOptions = useMemo(() => {
+    const present = new Set((careers ?? []).map((c) => c.typicalEducation));
+    return DEGREE_ORDER.filter((d) => present.has(d));
+  }, [careers]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (careers ?? [])
+      .filter((c) => (q ? c.occupation.toLowerCase().includes(q) : true))
+      .filter((c) => (minWage > 0 ? c.annualMedianWage >= minWage : true))
+      .filter((c) => (minGrowth > -100 ? c.projectedGrowthPct >= minGrowth : true))
+      .filter((c) => (degree !== "any" ? c.typicalEducation === degree : true))
+      .sort((a, b) => b.annualMedianWage - a.annualMedianWage);
+  }, [careers, search, minWage, minGrowth, degree]);
+
+  const filtersActive = search.trim() !== "" || minWage > 0 || minGrowth > -100 || degree !== "any";
+  const resetFilters = () => { setSearch(""); setMinWage(0); setMinGrowth(-100); setDegree("any"); };
+
+  const selectCls = "px-3 py-2 rounded-xl border border-border bg-card text-sm font-medium text-foreground outline-none focus:border-primary transition-colors cursor-pointer";
+
+  return (
+    <main className="w-full max-w-5xl mx-auto px-4 py-10">
+      <div className="mb-6">
+        <h2 className="text-3xl font-serif font-bold text-foreground">Browse Careers</h2>
+        <p className="text-muted-foreground mt-1">Explore occupations with real salary and job-growth data from the U.S. Bureau of Labor Statistics.</p>
+      </div>
+
+      <div className="bg-card rounded-2xl border border-border shadow-sm p-4 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search occupations…"
+              className="w-full pl-9 pr-3 py-2 rounded-xl border border-border text-sm outline-none focus:border-primary transition-colors"
+              data-testid="input-career-search"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-muted-foreground hidden sm:block" />
+            <select value={minWage} onChange={(e) => setMinWage(Number(e.target.value))} className={selectCls} data-testid="select-wage">
+              {WAGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <select value={minGrowth} onChange={(e) => setMinGrowth(Number(e.target.value))} className={selectCls} data-testid="select-growth">
+              {GROWTH_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <select value={degree} onChange={(e) => setDegree(e.target.value)} className={selectCls} data-testid="select-degree">
+              <option value="any">Any education</option>
+              {degreeOptions.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+            {filtersActive && (
+              <button onClick={resetFilters} className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground px-2 py-2 transition-colors" data-testid="button-reset-filters">
+                <RotateCcw className="w-3.5 h-3.5" /> Reset
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-card rounded-2xl border border-border p-5 animate-pulse">
+              <div className="h-4 bg-muted rounded w-3/4 mb-3" />
+              <div className="h-7 bg-muted rounded w-1/2 mb-3" />
+              <div className="h-5 bg-muted rounded w-full mb-2" />
+              <div className="h-3 bg-muted rounded w-2/3" />
+            </div>
+          ))}
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+          <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mb-4">
+            <AlertCircle className="w-7 h-7 text-rose-500" />
+          </div>
+          <h3 className="text-lg font-serif font-bold text-foreground mb-1.5">Couldn't load careers</h3>
+          <p className="text-muted-foreground max-w-sm mb-5">Something went wrong fetching the career data. Please try again.</p>
+          <button onClick={() => refetch()} className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-primary/90 transition-colors">
+            <RotateCcw className="w-4 h-4" /> Retry
+          </button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+          <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
+            <Briefcase className="w-7 h-7 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-serif font-bold text-foreground mb-1.5">No careers match your filters</h3>
+          <p className="text-muted-foreground max-w-sm mb-5">Try widening your salary, growth, or education filters.</p>
+          {filtersActive && (
+            <button onClick={resetFilters} className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-primary/90 transition-colors">
+              <RotateCcw className="w-4 h-4" /> Clear filters
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground mb-4">{filtered.length} {filtered.length === 1 ? "occupation" : "occupations"}{isFetching ? " · refreshing…" : ""}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtered.map((c) => {
+              const up = c.projectedGrowthPct >= 0;
+              return (
+                <div key={c.socCode} className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col" data-testid={`card-career-${c.socCode}`}>
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <h3 className="font-serif font-bold text-foreground text-base leading-tight">{c.occupation}</h3>
+                    <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0 mt-1">{c.socCode}</span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 mb-3">
+                    <span className="text-2xl font-bold text-foreground">{formatUSD(c.annualMedianWage)}</span>
+                    <span className="text-xs text-muted-foreground">median / yr</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg ${up ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                      <TrendingUp className="w-3 h-3" />{up ? "+" : ""}{c.projectedGrowthPct}%
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg bg-muted text-muted-foreground">
+                      <Award className="w-3 h-3" />{c.typicalEducation}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-auto pt-1">
+                    Entry {formatUSD(c.annualEntryWage)} · Experienced {formatUSD(c.annualExperiencedWage)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground mt-6">
+            Source: U.S. Bureau of Labor Statistics — OEWS wages &amp; Employment Projections. Figures are national medians.
+          </p>
+        </>
+      )}
+    </main>
+  );
+}
 
 function AppShell() {
   const [view, setView] = useState<AppView>("explore");
   const [saved, setSaved] = useState<SavedData>(loadSaved);
   const [myColleges, setMyColleges] = useState<MyCollege[]>(loadMyColleges);
-  const [quizState, setQuizState] = useState<"quiz" | "results" | "done">(() =>
+  const [profile, setProfile] = useState<UserProfile>(loadProfile);
+  const [showSettings, setShowSettings] = useState(false);
+  const [theme, setTheme] = useState<Theme>(loadTheme);
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      persistTheme(next);
+      applyTheme(next);
+      return next;
+    });
+  };
+  const [quizState, setQuizState] = useState<"quiz" | "profile" | "results" | "done">(() =>
     localStorage.getItem(QUIZ_DONE_KEY) ? "done" : "quiz"
   );
   const [quizResults, setQuizResults] = useState<MajorSuggestion[]>(() => {
@@ -1526,8 +2014,15 @@ function AppShell() {
   const handleQuizComplete = (majors: MajorSuggestion[]) => {
     setQuizResults(majors);
     localStorage.setItem(QUIZ_RESULTS_KEY, JSON.stringify(majors));
+    setQuizState("profile");
+  };
+
+  const handleProfileComplete = (p: UserProfile) => {
+    setProfile(p); persistProfile(p);
     setQuizState("results");
   };
+  const handleProfileSkip = () => setQuizState("results");
+  const handleSaveProfile = (p: UserProfile) => { setProfile(p); persistProfile(p); };
 
   const handleExploreMajor = (major: string) => {
     localStorage.setItem(QUIZ_DONE_KEY, "1");
@@ -1550,6 +2045,10 @@ function AppShell() {
     return <InterestQuiz onComplete={handleQuizComplete} />;
   }
 
+  if (quizState === "profile") {
+    return <OnboardingProfile initial={profile} onComplete={handleProfileComplete} onSkip={handleProfileSkip} />;
+  }
+
   if (quizState === "results") {
     return (
       <QuizResults
@@ -1563,11 +2062,11 @@ function AppShell() {
   const navBtn = (target: AppView, label: string, count?: number) => (
     <button
       onClick={() => setView(target)}
-      className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${view === target ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`}
+      className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${view === target ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
     >
       {label}
       {count !== undefined && count > 0 && (
-        <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center ${view === target ? "bg-white text-slate-900" : "bg-slate-900 text-white"}`}>
+        <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center ${view === target ? "bg-card text-foreground" : "bg-primary text-primary-foreground"}`}>
           {count}
         </span>
       )}
@@ -1575,24 +2074,50 @@ function AppShell() {
   );
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 flex flex-col">
-      <header className="w-full py-4 px-6 lg:px-12 flex items-center justify-between border-b border-slate-200 bg-white shadow-sm sticky top-0 z-40">
-        <button onClick={() => setView("explore")} className="flex items-center gap-2 text-slate-900 hover:opacity-75 transition-opacity">
-          <Milestone className="w-5 h-5 text-slate-700" />
-          <span className="font-serif font-semibold text-lg tracking-tight">Next Steps</span>
-        </button>
-        <div className="flex items-center gap-3">
-          <nav className="flex items-center gap-1">
-            {navBtn("explore", "Explore")}
-            {navBtn("suggested", "Suggested")}
-            {navBtn("colleges", "My Colleges", savedCollegeCount)}
-            {navBtn("saved", "Saved", savedMajorCount)}
-          </nav>
-          <Show when="signed-in">
-            <div className="w-px h-5 bg-slate-200 mx-1" />
-            <UserMenu />
-          </Show>
+    <div className="min-h-screen w-full bg-background flex flex-col">
+      <header className="w-full px-4 sm:px-6 lg:px-12 py-3 lg:py-4 border-b border-border bg-card shadow-sm sticky top-0 z-40">
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={() => setView("explore")} className="flex items-center gap-2 text-foreground hover:opacity-75 transition-opacity shrink-0">
+            <Milestone className="w-5 h-5 text-foreground" />
+            <span className="font-serif font-semibold text-lg tracking-tight">Next Steps</span>
+          </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <nav className="hidden lg:flex items-center gap-1">
+              {navBtn("explore", "Explore")}
+              {navBtn("suggested", "Suggested")}
+              {navBtn("careers", "Careers")}
+              {navBtn("colleges", "My Colleges", savedCollegeCount)}
+              {navBtn("saved", "Saved", savedMajorCount)}
+            </nav>
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-colors"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              data-testid="button-toggle-theme"
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="w-9 h-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-colors"
+              title="Profile & GPA"
+              data-testid="button-open-settings"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+            <Show when="signed-in">
+              <div className="w-px h-5 bg-border mx-1" />
+              <UserMenu />
+            </Show>
+          </div>
         </div>
+        <nav className="lg:hidden flex items-center gap-1 mt-2 -mx-4 px-4 overflow-x-auto no-scrollbar">
+          {navBtn("explore", "Explore")}
+          {navBtn("suggested", "Suggested")}
+          {navBtn("careers", "Careers")}
+          {navBtn("colleges", "My Colleges", savedCollegeCount)}
+          {navBtn("saved", "Saved", savedMajorCount)}
+        </nav>
       </header>
 
       {view === "explore" && (
@@ -1600,6 +2125,7 @@ function AppShell() {
           saved={saved} setSaved={setSaved}
           myColleges={myColleges} setMyColleges={setMyColleges}
           initialMajor={exploreInitialMajor}
+          userGpa={profile.gpa}
         />
       )}
       {view === "suggested" && (
@@ -1609,13 +2135,17 @@ function AppShell() {
           onRetake={handleRetakeQuiz}
         />
       )}
+      {view === "careers" && <CareersView />}
       {view === "colleges" && (
-        <MyCollegesView myColleges={myColleges} onRemove={removeMyCollege} />
+        <MyCollegesView myColleges={myColleges} onRemove={removeMyCollege} userGpa={profile.gpa} />
       )}
       {view === "saved" && (
-        <SavedView saved={saved} onUnsaveMajor={unsaveMajor} onUnsaveCollege={unsaveCollege} />
+        <SavedView saved={saved} onUnsaveMajor={unsaveMajor} onUnsaveCollege={unsaveCollege} userGpa={profile.gpa} />
       )}
 
+      {showSettings && (
+        <ProfileSettingsModal initial={profile} onSave={handleSaveProfile} onClose={() => setShowSettings(false)} />
+      )}
       <ChatWidget />
     </div>
   );
@@ -1625,38 +2155,38 @@ function AppShell() {
 function LandingPage() {
   const [, setLocation] = useLocation();
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="w-full py-4 px-6 lg:px-12 flex items-center justify-between border-b border-slate-200 bg-white shadow-sm">
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="w-full py-4 px-6 lg:px-12 flex items-center justify-between border-b border-border bg-card shadow-sm">
         <div className="flex items-center gap-2">
-          <Milestone className="w-5 h-5 text-slate-700" />
-          <span className="font-serif font-semibold text-lg tracking-tight text-slate-900">Next Steps</span>
+          <Milestone className="w-5 h-5 text-foreground" />
+          <span className="font-serif font-semibold text-lg tracking-tight text-foreground">Next Steps</span>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setLocation("/sign-in")} className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-4 py-2 rounded-full hover:bg-slate-100">
+          <button onClick={() => setLocation("/sign-in")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-full hover:bg-muted">
             Sign in
           </button>
-          <button onClick={() => setLocation("/sign-up")} className="text-sm font-semibold bg-slate-900 text-white px-5 py-2 rounded-full hover:bg-slate-700 transition-colors">
+          <button onClick={() => setLocation("/sign-up")} className="text-sm font-semibold bg-primary text-primary-foreground px-5 py-2 rounded-full hover:bg-primary/90 transition-colors">
             Get started
           </button>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-20 text-center">
-        <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
+        <div className="inline-flex items-center gap-2 bg-muted text-muted-foreground text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
           <Sparkles className="w-3.5 h-3.5" />
           AI-powered college major explorer
         </div>
-        <h1 className="text-5xl md:text-7xl font-serif font-bold text-slate-900 mb-6 leading-tight max-w-3xl">
+        <h1 className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6 leading-tight max-w-3xl">
           Find the major that's right for you.
         </h1>
-        <p className="text-xl text-slate-500 max-w-xl mb-10 leading-relaxed">
+        <p className="text-xl text-muted-foreground max-w-xl mb-10 leading-relaxed">
           Take a quick quiz, get personalized major recommendations, and explore the top US universities for any field.
         </p>
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          <button onClick={() => setLocation("/sign-up")} className="flex items-center gap-2 bg-slate-900 text-white text-base font-semibold px-8 py-4 rounded-full hover:bg-slate-700 transition-colors shadow-lg">
+          <button onClick={() => setLocation("/sign-up")} className="flex items-center gap-2 bg-primary text-primary-foreground text-base font-semibold px-8 py-4 rounded-full hover:bg-primary/90 transition-colors shadow-lg">
             Start for free <ChevronRight className="w-5 h-5" />
           </button>
-          <button onClick={() => setLocation("/sign-in")} className="text-base font-medium text-slate-600 hover:text-slate-900 transition-colors">
+          <button onClick={() => setLocation("/sign-in")} className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors">
             Already have an account →
           </button>
         </div>
@@ -1667,10 +2197,10 @@ function LandingPage() {
             { emoji: "🏛️", title: "Top 10 colleges", desc: "Instantly see the top US universities for any major, with highlights on what makes each one great." },
             { emoji: "🗓️", title: "4-year course plan", desc: "Click any college to see a realistic 4-year course plan tailored to your major." },
           ].map(({ emoji, title, desc }) => (
-            <div key={title} className="bg-white rounded-2xl border border-slate-200 p-6 text-left shadow-sm">
+            <div key={title} className="bg-card rounded-2xl border border-border p-6 text-left shadow-sm">
               <div className="text-3xl mb-3">{emoji}</div>
-              <h3 className="font-serif font-bold text-slate-900 text-lg mb-2">{title}</h3>
-              <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
+              <h3 className="font-serif font-bold text-foreground text-lg mb-2">{title}</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">{desc}</p>
             </div>
           ))}
         </div>
@@ -1682,7 +2212,7 @@ function LandingPage() {
 // ─── Sign-in / Sign-up pages ──────────────────────────────────────────
 function SignInPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
     </div>
   );
@@ -1690,7 +2220,7 @@ function SignInPage() {
 
 function SignUpPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
     </div>
   );

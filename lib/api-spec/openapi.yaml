@@ -75,6 +75,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /careers:
+    get:
+      operationId: getCareers
+      tags: [majors]
+      summary: List all careers with BLS data
+      description: Returns the full catalog of occupations with BLS salary, projected job growth, and typical education
+      responses:
+        "200":
+          description: List of careers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CareerInfo"
   /chat:
     post:
       operationId: chat
@@ -93,7 +108,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ChatResponse"
+                $ref: "#/components/schemas/ChatReply"
         "400":
           description: Bad request
           content:
@@ -117,6 +132,21 @@ components:
           description: The college major to look up
       required:
         - major
+    AdmissionsProfile:
+      type: object
+      description: Estimated admissions selectivity used to compute Reach/Match/Safety
+      properties:
+        gpaLow:
+          type: ["number", "null"]
+          description: Lower bound of typical admitted GPA (≈25th percentile, 0-4 scale)
+        gpaHigh:
+          type: ["number", "null"]
+          description: Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)
+        selectivityTier:
+          type: string
+          enum: [most_selective, highly_selective, selective, accessible]
+      required:
+        - selectivityTier
     College:
       type: object
       properties:
@@ -128,24 +158,51 @@ components:
           type: string
         highlights:
           type: string
+        admissionsProfile:
+          $ref: "#/components/schemas/AdmissionsProfile"
       required:
         - rank
         - name
         - location
         - highlights
-    SalaryInfo:
+    CareerInfo:
       type: object
+      description: Real occupation data from the U.S. Bureau of Labor Statistics
       properties:
-        entryLevel:
+        occupation:
           type: string
-        midCareer:
+        socCode:
           type: string
-        experienced:
+        annualMedianWage:
+          type: integer
+        annualEntryWage:
+          type: integer
+        annualExperiencedWage:
+          type: integer
+        projectedGrowthPct:
+          type: number
+        typicalEducation:
+          type: string
+        sourceName:
+          type: string
+        sourceUrl:
+          type: string
+        wageDataYear:
+          type: string
+        growthDataPeriod:
           type: string
       required:
-        - entryLevel
-        - midCareer
-        - experienced
+        - occupation
+        - socCode
+        - annualMedianWage
+        - annualEntryWage
+        - annualExperiencedWage
+        - projectedGrowthPct
+        - typicalEducation
+        - sourceName
+        - sourceUrl
+        - wageDataYear
+        - growthDataPeriod
     MajorLookupResponse:
       type: object
       properties:
@@ -153,8 +210,11 @@ components:
           type: string
         description:
           type: string
-        salary:
-          $ref: "#/components/schemas/SalaryInfo"
+        career:
+          anyOf:
+            - $ref: "#/components/schemas/CareerInfo"
+            - type: "null"
+          description: Real BLS career data, or null when no matching occupation was found
         topColleges:
           type: array
           items:
@@ -162,7 +222,7 @@ components:
       required:
         - major
         - description
-        - salary
+        - career
         - topColleges
     CurriculumRequest:
       type: object
@@ -239,7 +299,7 @@ components:
             $ref: "#/components/schemas/ChatMessage"
       required:
         - messages
-    ChatResponse:
+    ChatReply:
       type: object
       properties:
         reply:

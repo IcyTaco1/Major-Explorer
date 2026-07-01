@@ -153,7 +153,7 @@ For the "${trimmedMajor}" major, respond ONLY with a valid JSON object in this e
         "selectivityTier": "<one of: most_selective, highly_selective, selective, accessible>"
       }
     }
-    // ... 10 total
+    // ... 50 total, ranked 1-50
   ]
 }
 
@@ -162,7 +162,7 @@ Requirements:
 - DO NOT include any salary, wage, pay, or income figures anywhere in your response. Wages are provided separately from official data.
 - "blsSocCode" MUST be exactly one of the SOC codes from the list below, or "" if none reasonably fit. Do not invent SOC codes.
 - For each college, "admissionsProfile" describes the typical admitted student's high-school GPA (4.0 scale), SAT total (400-1600), and ACT composite (1-36), plus the school's overall admission difficulty. Use realistic values for that specific school. If a school is test-optional or a figure is genuinely unknown, use null for that field.
-- List exactly 10 colleges ranked 1-10 based on reputation for ${trimmedMajor}, using well-known, reputable US universities only.
+- List exactly 50 colleges ranked 1-50 based on reputation for ${trimmedMajor}, using well-known, reputable US universities only. Every college must be unique (no duplicates), and they must be ordered strictly from strongest (rank 1) to weakest (rank 50) for this specific major.
 - Return only the JSON, nothing else.
 
 SOC code list (choose "blsSocCode" ONLY from these):
@@ -171,7 +171,11 @@ ${WHITELIST_TEXT}`;
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
-      max_completion_tokens: 2500,
+      // Listing/ranking task needs no deep reasoning, so skip it to avoid
+      // wasted reasoning tokens. NOTE: latency for a 50-college response is
+      // dominated by output size (~5k tokens ≈ 85-90s), not reasoning effort.
+      reasoning_effort: "none",
+      max_completion_tokens: 14000,
       messages: [{ role: "user", content: prompt }],
     });
 
@@ -217,9 +221,17 @@ ${WHITELIST_TEXT}`;
       req.log.warn({ major: trimmedMajor }, "Scrubbed potential wage figure from AI description");
     }
 
-    // Cap to the top 10 and renumber ranks 1..n so the contract's "top 10"
-    // requirement holds even if the model returns a different count or ranking.
-    const topColleges = data.topColleges.slice(0, 10).map((c, i) => {
+    // Drop duplicate schools (by name), then cap to the top 50 and renumber
+    // ranks 1..n so the ranking is contiguous even if the model repeats a
+    // college or returns a different count/ordering.
+    const seenNames = new Set<string>();
+    const uniqueColleges = data.topColleges.filter((c) => {
+      const key = c.name.trim().toLowerCase();
+      if (!key || seenNames.has(key)) return false;
+      seenNames.add(key);
+      return true;
+    });
+    const topColleges = uniqueColleges.slice(0, 50).map((c, i) => {
       const cleanHighlights = scrubWages(c.highlights);
       if (cleanHighlights.scrubbed) {
         req.log.warn({ major: trimmedMajor, college: c.name }, "Scrubbed potential wage figure from AI highlights");

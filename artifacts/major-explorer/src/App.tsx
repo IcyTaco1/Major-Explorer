@@ -1305,6 +1305,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
   const [activeIdx, setActiveIdx] = useState(-1);
   const [fitFilter, setFitFilter] = useState<FitTier | "all">("all");
   const [selFilter, setSelFilter] = useState<string>("all");
+  const [page, setPage] = useState(0);
   const lookupMajor = useLookupMajor();
 
   useEffect(() => {
@@ -1327,7 +1328,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const resetFilters = () => { setFitFilter("all"); setSelFilter("all"); };
+  const resetFilters = () => { setFitFilter("all"); setSelFilter("all"); setPage(0); };
 
   const handleSearch = () => {
     if (!inputValue.trim()) return;
@@ -1425,11 +1426,23 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
   const isError = lookupMajor.isError;
   const result = lookupMajor.data;
 
+  const totalColleges = result?.topColleges.length ?? 0;
   const filteredColleges = (result?.topColleges ?? []).filter((c) => {
     if (userGpa != null && fitFilter !== "all" && computeFit(userGpa, c.admissionsProfile) !== fitFilter) return false;
     if (selFilter !== "all" && c.admissionsProfile?.selectivityTier !== selFilter) return false;
     return true;
   });
+
+  const PAGE_SIZE = 10;
+  const pageCount = Math.max(1, Math.ceil(filteredColleges.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pagedColleges = filteredColleges.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
+  const rangeStart = filteredColleges.length === 0 ? 0 : currentPage * PAGE_SIZE + 1;
+  const rangeEnd = currentPage * PAGE_SIZE + pagedColleges.length;
+  const goToPage = (p: number) => {
+    setPage(Math.min(pageCount - 1, Math.max(0, p)));
+    dropdownRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <main className="flex-1 flex flex-col items-center pt-14 md:pt-20 px-4 pb-24">
@@ -1498,6 +1511,10 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
 
         {isLoading && (
           <div className="w-full animate-in fade-in duration-300">
+            <div className="flex items-center justify-center gap-2 mb-6 text-sm text-muted-foreground" data-testid="text-loading-hint">
+              <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+              Researching the top 50 colleges — this can take a minute or two. Hang tight.
+            </div>
             <div className="bg-card rounded-2xl shadow-sm border border-border p-8 md:p-12 mb-8 animate-pulse">
               <div className="h-10 bg-muted rounded w-1/3 mb-6" />
               <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-4 bg-muted rounded" style={{ width: `${85+(i*3)}%` }} />)}</div>
@@ -1561,7 +1578,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                     { value: "match", label: "Match" },
                     { value: "safety", label: "Safety" },
                   ]}
-                  onChange={(v) => setFitFilter(v as FitTier | "all")}
+                  onChange={(v) => { setFitFilter(v as FitTier | "all"); setPage(0); }}
                 />
               ) : (
                 <p className="text-xs text-muted-foreground">Add your GPA in Settings to filter by Reach / Match / Safety.</p>
@@ -1576,10 +1593,10 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                   { value: "selective", label: "Selective" },
                   { value: "accessible", label: "Accessible" },
                 ]}
-                onChange={setSelFilter}
+                onChange={(v) => { setSelFilter(v); setPage(0); }}
               />
             </div>
-            <p className="text-xs text-muted-foreground mb-4" data-testid="text-filter-count">Showing {filteredColleges.length} of {result.topColleges.length} colleges</p>
+            <p className="text-xs text-muted-foreground mb-4" data-testid="text-filter-count">Showing {rangeStart}–{rangeEnd} of {filteredColleges.length}{filteredColleges.length !== totalColleges ? ` (filtered from ${totalColleges})` : ""} colleges</p>
 
             <div ref={dropdownRef} className="space-y-4" data-testid="list-top-colleges">
               {filteredColleges.length === 0 && (
@@ -1588,7 +1605,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                   <button onClick={resetFilters} className="text-primary font-medium hover:underline" data-testid="button-clear-filters">Clear filters</button>
                 </div>
               )}
-              {filteredColleges.map((college, index) => {
+              {pagedColleges.map((college, index) => {
                 const anySaved = isAnywhereSaved(result.major, college.name);
                 const inSaved = isInSaved(result.major, college.name);
                 const inMyColleges = isInMyColleges(college.name, result.major);
@@ -1657,6 +1674,28 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                 );
               })}
             </div>
+
+            {pageCount > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-3" data-testid="pagination-controls">
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 0}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-border bg-card text-sm font-medium text-foreground transition-all hover:border-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                  data-testid="button-prev-page"
+                >
+                  <ChevronLeft className="w-4 h-4" /> Previous
+                </button>
+                <span className="text-sm text-muted-foreground tabular-nums px-2" data-testid="text-page-indicator">Page {currentPage + 1} of {pageCount}</span>
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === pageCount - 1}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-border bg-card text-sm font-medium text-foreground transition-all hover:border-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                  data-testid="button-next-page"
+                >
+                  Next <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

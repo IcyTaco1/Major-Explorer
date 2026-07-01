@@ -30,7 +30,7 @@ paths:
       operationId: lookupMajor
       tags: [majors]
       summary: Look up a college major
-      description: Returns a description and top 10 colleges for a given major
+      description: Returns a description and a ranked list of top colleges for a given major
       requestBody:
         required: true
         content:

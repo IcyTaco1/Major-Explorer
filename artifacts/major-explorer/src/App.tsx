@@ -14,7 +14,7 @@ import {
   ChevronRight, ChevronDown, ChevronUp, Bookmark, BookmarkCheck,
   Trash2, SortAsc, MessageCircle, Send, Bot, Check, DollarSign,
   LogOut, User, ChevronLeft, Sparkles, TrendingUp, Award, ExternalLink, Briefcase,
-  Settings, SlidersHorizontal, RotateCcw, Sun, Moon, Monitor, Palette, ShieldCheck, UserCog, type LucideIcon
+  Settings, SlidersHorizontal, RotateCcw, Sun, Moon, Monitor, Palette, ShieldCheck, UserCog, BarChart3, type LucideIcon
 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 
@@ -127,18 +127,25 @@ function persistMyColleges(data: MyCollege[]) { localStorage.setItem(MY_COLLEGES
 // sent to the server or logged anywhere.
 interface UserProfile {
   gpa: number | null;
+  sat: number | null;
+  act: number | null;
   goals: string;
 }
 const PROFILE_KEY = "next-steps-profile";
-const EMPTY_PROFILE: UserProfile = { gpa: null, goals: "" };
+const EMPTY_PROFILE: UserProfile = { gpa: null, sat: null, act: null, goals: "" };
 function loadProfile(): UserProfile {
   try {
     const raw = JSON.parse(localStorage.getItem(PROFILE_KEY) ?? "null");
     if (!raw || typeof raw !== "object") return { ...EMPTY_PROFILE };
-    const gpaRaw = (raw as UserProfile).gpa;
-    const gpa = typeof gpaRaw === "number" && Number.isFinite(gpaRaw) ? gpaRaw : null;
-    const goals = typeof (raw as UserProfile).goals === "string" ? (raw as UserProfile).goals : "";
-    return { gpa, goals };
+    const r = raw as Partial<UserProfile>;
+    const inRange = (v: unknown, lo: number, hi: number): number | null =>
+      typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? v : null;
+    return {
+      gpa: inRange(r.gpa, 0, 4),
+      sat: inRange(r.sat, 400, 1600),
+      act: inRange(r.act, 1, 36),
+      goals: typeof r.goals === "string" ? r.goals : "",
+    };
   } catch { return { ...EMPTY_PROFILE }; }
 }
 function persistProfile(data: UserProfile) { localStorage.setItem(PROFILE_KEY, JSON.stringify(data)); }
@@ -731,7 +738,7 @@ function QuizResults({ majors, onExplore, onDismiss }: { majors: MajorSuggestion
 }
 
 // ─── Curriculum Modal ────────────────────────────────────────────────
-function CurriculumModal({ college, major, onClose }: { college: College; major: string; onClose: () => void }) {
+function CurriculumModal({ college, major, profile, onClose }: { college: College; major: string; profile: UserProfile; onClose: () => void }) {
   const getCurriculum = useGetMajorCurriculum();
   useEffect(() => { getCurriculum.mutate({ data: { major, college: college.name } }); }, []);
 
@@ -756,6 +763,9 @@ function CurriculumModal({ college, major, onClose }: { college: College; major:
           <button onClick={onClose} className="flex-shrink-0 w-9 h-9 rounded-full bg-muted hover:bg-muted flex items-center justify-center transition-colors"><X className="w-4 h-4 text-muted-foreground" /></button>
         </div>
         <div className="overflow-y-auto flex-1 p-6 md:p-8">
+          <div className="mb-6">
+            <AdmissionComparison profile={profile} admissionsProfile={college.admissionsProfile} />
+          </div>
           {getCurriculum.isPending && (
             <div className="space-y-6 animate-pulse">
               {[1,2,3,4].map((i) => (
@@ -1047,6 +1057,89 @@ function CollegeFitBadge({ userGpa, admissionsProfile, className = "" }: {
   );
 }
 
+// ─── Admission comparison (your GPA/SAT/ACT vs typical admitted) ───────
+type CompareRow = {
+  key: "gpa" | "sat" | "act";
+  label: string;
+  user: number;
+  low: number;
+  high: number;
+  min: number;
+  max: number;
+  format: (n: number) => string;
+};
+
+function buildCompareRows(profile: UserProfile, ap: College["admissionsProfile"]): CompareRow[] {
+  if (!ap) return [];
+  const rows: CompareRow[] = [];
+  const gpaFmt = (n: number) => n.toFixed(2);
+  const intFmt = (n: number) => String(Math.round(n));
+  if (profile.gpa != null && ap.gpaLow != null && ap.gpaHigh != null) {
+    rows.push({ key: "gpa", label: "GPA", user: profile.gpa, low: ap.gpaLow, high: ap.gpaHigh, min: 0, max: 4, format: gpaFmt });
+  }
+  if (profile.sat != null && ap.satLow != null && ap.satHigh != null) {
+    rows.push({ key: "sat", label: "SAT", user: profile.sat, low: ap.satLow, high: ap.satHigh, min: 400, max: 1600, format: intFmt });
+  }
+  if (profile.act != null && ap.actLow != null && ap.actHigh != null) {
+    rows.push({ key: "act", label: "ACT", user: profile.act, low: ap.actLow, high: ap.actHigh, min: 1, max: 36, format: intFmt });
+  }
+  return rows;
+}
+
+function standing(user: number, low: number, high: number): { label: string; chip: string; dot: string } {
+  if (user > high) return { label: "Above typical", chip: "text-emerald-700 bg-emerald-100 ring-emerald-200", dot: "bg-emerald-500" };
+  if (user < low) return { label: "Below typical", chip: "text-rose-700 bg-rose-100 ring-rose-200", dot: "bg-rose-500" };
+  return { label: "In middle 50%", chip: "text-amber-700 bg-amber-100 ring-amber-200", dot: "bg-amber-500" };
+}
+
+function AdmissionComparison({ profile, admissionsProfile }: {
+  profile: UserProfile;
+  admissionsProfile: College["admissionsProfile"];
+}) {
+  const rows = buildCompareRows(profile, admissionsProfile);
+  const hasAnyUserStat = profile.gpa != null || profile.sat != null || profile.act != null;
+
+  return (
+    <div className="rounded-2xl border border-border bg-background p-5" data-testid="admission-comparison">
+      <div className="flex items-center gap-2 mb-1">
+        <BarChart3 className="w-4 h-4 text-muted-foreground" />
+        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">How you compare</span>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">Your stats vs the typical admitted student's middle 50%. Estimated figures — a rough guide, not a prediction.</p>
+      {!hasAnyUserStat ? (
+        <p className="text-sm text-muted-foreground">Add your GPA and SAT/ACT in Settings to see how you stack up against each school's typical admitted students.</p>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">We don't have admitted-student score ranges for this school yet.</p>
+      ) : (
+        <div className="space-y-4">
+          {rows.map((r) => {
+            const s = standing(r.user, r.low, r.high);
+            const pos = (v: number) => Math.max(0, Math.min(100, ((v - r.min) / (r.max - r.min)) * 100));
+            const bandLeft = pos(r.low);
+            const bandWidth = Math.min(100 - bandLeft, Math.max(3, pos(r.high) - pos(r.low)));
+            const marker = pos(r.user);
+            return (
+              <div key={r.key} data-testid={`compare-${r.key}`}>
+                <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                  <div className="text-xs">
+                    <span className="text-sm font-bold text-foreground mr-2">{r.label}</span>
+                    <span className="text-muted-foreground">You <span className="font-semibold text-foreground">{r.format(r.user)}</span> · Typical {r.format(r.low)}–{r.format(r.high)}</span>
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ring-1 ${s.chip}`}>{s.label}</span>
+                </div>
+                <div className="relative h-2 rounded-full bg-muted">
+                  <div className="absolute top-0 h-2 rounded-full bg-primary/25" style={{ left: `${bandLeft}%`, width: `${bandWidth}%` }} />
+                  <div className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full ring-2 ring-card ${s.dot}`} style={{ left: `${marker}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Currency + Career stats (real BLS data) ──────────────────────────
 function formatUSD(value: number): string {
   return `$${Math.round(value).toLocaleString("en-US")}`;
@@ -1132,13 +1225,14 @@ function CareerStats({ career }: { career: CareerInfo | null }) {
 }
 
 // ─── Explore View ──────────────────────────────────────────────────────
-function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor, userGpa }: {
+function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor, userGpa, profile }: {
   saved: SavedData;
   setSaved: (d: SavedData) => void;
   myColleges: MyCollege[];
   setMyColleges: (d: MyCollege[]) => void;
   initialMajor?: string;
   userGpa: number | null;
+  profile: UserProfile;
 }) {
   const [inputValue, setInputValue] = useState(initialMajor || "");
   const [currentMajor, setCurrentMajor] = useState(initialMajor || "");
@@ -1400,7 +1494,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
       </div>
 
       {selectedCollege && (
-        <CurriculumModal college={selectedCollege} major={currentMajor} onClose={() => setSelectedCollege(null)} />
+        <CurriculumModal college={selectedCollege} major={currentMajor} profile={profile} onClose={() => setSelectedCollege(null)} />
       )}
     </main>
   );
@@ -1624,16 +1718,33 @@ const GOAL_PRESETS = [
 
 function useGpaGoals(initial: UserProfile) {
   const [gpa, setGpa] = useState(initial.gpa == null ? "" : String(initial.gpa));
+  const [sat, setSat] = useState(initial.sat == null ? "" : String(initial.sat));
+  const [act, setAct] = useState(initial.act == null ? "" : String(initial.act));
   const [goals, setGoals] = useState(initial.goals);
-  const trimmed = gpa.trim();
-  const gpaNum = trimmed === "" ? null : Number(trimmed);
+
+  const gpaTrim = gpa.trim();
+  const gpaNum = gpaTrim === "" ? null : Number(gpaTrim);
   const gpaValid = gpaNum == null || (Number.isFinite(gpaNum) && gpaNum >= 0 && gpaNum <= 4);
-  const profile: UserProfile = { gpa: gpaValid ? gpaNum : null, goals: goals.trim() };
-  return { gpa, setGpa, goals, setGoals, gpaValid, profile };
+
+  const satTrim = sat.trim();
+  const satNum = satTrim === "" ? null : Number(satTrim);
+  const satValid = satNum == null || (Number.isFinite(satNum) && satNum >= 400 && satNum <= 1600);
+
+  const actTrim = act.trim();
+  const actNum = actTrim === "" ? null : Number(actTrim);
+  const actValid = actNum == null || (Number.isFinite(actNum) && actNum >= 1 && actNum <= 36);
+
+  const profile: UserProfile = {
+    gpa: gpaValid ? gpaNum : null,
+    sat: satValid ? satNum : null,
+    act: actValid ? actNum : null,
+    goals: goals.trim(),
+  };
+  return { gpa, setGpa, sat, setSat, act, setAct, goals, setGoals, gpaValid, satValid, actValid, profile };
 }
 
 function GpaGoalsControls({ state }: { state: ReturnType<typeof useGpaGoals> }) {
-  const { gpa, setGpa, goals, setGoals, gpaValid } = state;
+  const { gpa, setGpa, sat, setSat, act, setAct, goals, setGoals, gpaValid, satValid, actValid } = state;
   return (
     <div className="space-y-5 text-left">
       <div>
@@ -1655,6 +1766,48 @@ function GpaGoalsControls({ state }: { state: ReturnType<typeof useGpaGoals> }) 
         />
         {!gpaValid && <p className="text-xs text-rose-500 mt-1.5">Enter a GPA between 0 and 4.0.</p>}
         <p className="text-xs text-muted-foreground mt-1.5">Stored only on your device to estimate Reach / Match / Safety. Never sent to our servers.</p>
+      </div>
+      <div>
+        <span className="block text-sm font-semibold text-foreground mb-1.5">
+          Test scores <span className="font-normal text-muted-foreground">(optional)</span>
+        </span>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="sat-input" className="block text-xs font-medium text-muted-foreground mb-1">SAT total (400–1600)</label>
+            <input
+              id="sat-input"
+              type="number"
+              inputMode="numeric"
+              min="400"
+              max="1600"
+              step="10"
+              value={sat}
+              onChange={(e) => setSat(e.target.value)}
+              placeholder="e.g. 1350"
+              className={`w-full px-4 py-3 rounded-xl border text-sm font-medium outline-none transition-colors ${satValid ? "border-border focus:border-primary" : "border-rose-300 focus:border-rose-500"}`}
+              data-testid="input-sat"
+            />
+            {!satValid && <p className="text-xs text-rose-500 mt-1.5">400–1600.</p>}
+          </div>
+          <div>
+            <label htmlFor="act-input" className="block text-xs font-medium text-muted-foreground mb-1">ACT composite (1–36)</label>
+            <input
+              id="act-input"
+              type="number"
+              inputMode="numeric"
+              min="1"
+              max="36"
+              step="1"
+              value={act}
+              onChange={(e) => setAct(e.target.value)}
+              placeholder="e.g. 30"
+              className={`w-full px-4 py-3 rounded-xl border text-sm font-medium outline-none transition-colors ${actValid ? "border-border focus:border-primary" : "border-rose-300 focus:border-rose-500"}`}
+              data-testid="input-act"
+            />
+            {!actValid && <p className="text-xs text-rose-500 mt-1.5">1–36.</p>}
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1.5">Add either or both to see how you compare with each college's typical admitted students. Stored only on your device, never sent to our servers.</p>
       </div>
       <div>
         <span className="block text-sm font-semibold text-foreground mb-2">
@@ -1708,7 +1861,7 @@ function OnboardingProfile({ initial, onComplete, onSkip }: {
           <GpaGoalsControls state={state} />
           <button
             onClick={() => onComplete(state.profile)}
-            disabled={!state.gpaValid}
+            disabled={!(state.gpaValid && state.satValid && state.actValid)}
             className="w-full mt-6 flex items-center justify-center gap-1.5 bg-primary text-primary-foreground text-sm font-semibold px-6 py-3 rounded-full hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             data-testid="button-save-profile"
           >
@@ -1862,7 +2015,7 @@ function SettingsDialog({ initial, onSaveProfile, theme, onChangeTheme, onRetake
                 <div className="pt-1">
                   <button
                     onClick={handleSaveProfile}
-                    disabled={!gpaState.gpaValid}
+                    disabled={!(gpaState.gpaValid && gpaState.satValid && gpaState.actValid)}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     data-testid="button-save-profile-settings"
                   >
@@ -2246,6 +2399,7 @@ function AppShell() {
           myColleges={myColleges} setMyColleges={setMyColleges}
           initialMajor={exploreInitialMajor}
           userGpa={profile.gpa}
+          profile={profile}
         />
       )}
       {view === "suggested" && (

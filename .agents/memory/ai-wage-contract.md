@@ -21,9 +21,17 @@ response is sent or logged. Keep it.
 reach the user); a single stray "$90k" hallucinated into free text would violate
 it. Models occasionally ignore negative prompt constraints.
 
-**Also locked:** GPA lives in localStorage only — never sent to or logged by the
-server; Reach/Match/Safety is computed client-side from GPA vs admissionsProfile.
-`/majors/lookup` also caps `topColleges` to 10 and renumbers ranks 1..n.
+**Same principle for AI numeric bounds:** `admissionsProfile` GPA/SAT/ACT low-high
+pairs come from the AI, so they are validated server-side, not just prompted —
+GPA 0-4, SAT int 400-1600, ACT int 1-36 (out-of-range/non-int coerced to null),
+and any reversed or half-open pair (low>high, or one end missing) is dropped to
+`[null,null]` so the client never renders a broken band. The client only shows a
+comparison row when the user value AND both college bounds exist.
+
+**Also locked:** GPA + SAT + ACT all live in localStorage only — never sent to or
+logged by the server; Reach/Match/Safety and the "how you compare" bars are computed
+client-side from those vs admissionsProfile. `/majors/lookup` also caps
+`topColleges` to 10 and renumbers ranks 1..n.
 
 **How to apply:** if you touch the lookup route or the prompt, do not remove the
 scrub/cap/SOC-whitelist logic; re-verify no `$` figure appears in description or

@@ -21,16 +21,49 @@ const WHITELIST_TEXT = OCCUPATION_WHITELIST.map(
 
 // Local schema for validating the AI's JSON output (kept out of the OpenAPI
 // contract: `blsSocCode` is internal and is stripped from the public response).
-const AiAdmissionsProfileSchema = z.object({
-  gpaLow: z.number().nullable().optional(),
-  gpaHigh: z.number().nullable().optional(),
-  selectivityTier: z.enum([
-    "most_selective",
-    "highly_selective",
-    "selective",
-    "accessible",
-  ]),
-});
+// The AI is instructed to return these bounds, but LLM output is untrusted:
+// any out-of-range or non-integer value is coerced to null rather than shown.
+const boundedGpa = z.number().min(0).max(4).nullable().catch(null).optional();
+const boundedSat = z.number().int().min(400).max(1600).nullable().catch(null).optional();
+const boundedAct = z.number().int().min(1).max(36).nullable().catch(null).optional();
+
+// A range is only usable when both ends exist and low <= high; otherwise we drop
+// both so the client never renders a reversed or half-open band.
+const usablePair = (
+  lo: number | null | undefined,
+  hi: number | null | undefined,
+): [number | null, number | null] =>
+  lo == null || hi == null || lo > hi ? [null, null] : [lo, hi];
+
+const AiAdmissionsProfileSchema = z
+  .object({
+    gpaLow: boundedGpa,
+    gpaHigh: boundedGpa,
+    satLow: boundedSat,
+    satHigh: boundedSat,
+    actLow: boundedAct,
+    actHigh: boundedAct,
+    selectivityTier: z.enum([
+      "most_selective",
+      "highly_selective",
+      "selective",
+      "accessible",
+    ]),
+  })
+  .transform((p) => {
+    const [gpaLow, gpaHigh] = usablePair(p.gpaLow, p.gpaHigh);
+    const [satLow, satHigh] = usablePair(p.satLow, p.satHigh);
+    const [actLow, actHigh] = usablePair(p.actLow, p.actHigh);
+    return {
+      selectivityTier: p.selectivityTier,
+      gpaLow,
+      gpaHigh,
+      satLow,
+      satHigh,
+      actLow,
+      actHigh,
+    };
+  });
 
 const AiCollegeSchema = z.object({
   rank: z.number(),
@@ -113,6 +146,10 @@ For the "${trimmedMajor}" major, respond ONLY with a valid JSON object in this e
       "admissionsProfile": {
         "gpaLow": <number 0-4: lower end of typical admitted high-school GPA, ~25th percentile>,
         "gpaHigh": <number 0-4: upper end of typical admitted high-school GPA, ~75th percentile>,
+        "satLow": <integer 400-1600: lower end of typical admitted SAT total, ~25th percentile>,
+        "satHigh": <integer 400-1600: upper end of typical admitted SAT total, ~75th percentile>,
+        "actLow": <integer 1-36: lower end of typical admitted ACT composite, ~25th percentile>,
+        "actHigh": <integer 1-36: upper end of typical admitted ACT composite, ~75th percentile>,
         "selectivityTier": "<one of: most_selective, highly_selective, selective, accessible>"
       }
     }
@@ -124,7 +161,7 @@ Requirements:
 - The description must be 5-7 sentences, friendly, simple, and engaging — no academic jargon.
 - DO NOT include any salary, wage, pay, or income figures anywhere in your response. Wages are provided separately from official data.
 - "blsSocCode" MUST be exactly one of the SOC codes from the list below, or "" if none reasonably fit. Do not invent SOC codes.
-- For each college, "admissionsProfile" describes the typical admitted student's high-school GPA on a 4.0 scale and the school's overall admission difficulty. Use realistic values for that specific school.
+- For each college, "admissionsProfile" describes the typical admitted student's high-school GPA (4.0 scale), SAT total (400-1600), and ACT composite (1-36), plus the school's overall admission difficulty. Use realistic values for that specific school. If a school is test-optional or a figure is genuinely unknown, use null for that field.
 - List exactly 10 colleges ranked 1-10 based on reputation for ${trimmedMajor}, using well-known, reputable US universities only.
 - Return only the JSON, nothing else.
 

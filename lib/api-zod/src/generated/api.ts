@@ -70,6 +70,30 @@ export const LookupMajorResponse = zod.object({
             .describe(
               "Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)",
             ),
+          satLow: zod
+            .number()
+            .nullish()
+            .describe(
+              "Lower bound of typical admitted SAT total (≈25th percentile, 400-1600)",
+            ),
+          satHigh: zod
+            .number()
+            .nullish()
+            .describe(
+              "Upper bound of typical admitted SAT total (≈75th percentile, 400-1600)",
+            ),
+          actLow: zod
+            .number()
+            .nullish()
+            .describe(
+              "Lower bound of typical admitted ACT composite (≈25th percentile, 1-36)",
+            ),
+          actHigh: zod
+            .number()
+            .nullish()
+            .describe(
+              "Upper bound of typical admitted ACT composite (≈75th percentile, 1-36)",
+            ),
           selectivityTier: zod.enum([
             "most_selective",
             "highly_selective",

@@ -142,6 +142,18 @@ components:
         gpaHigh:
           type: ["number", "null"]
           description: Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)
+        satLow:
+          type: ["integer", "null"]
+          description: Lower bound of typical admitted SAT total (≈25th percentile, 400-1600)
+        satHigh:
+          type: ["integer", "null"]
+          description: Upper bound of typical admitted SAT total (≈75th percentile, 400-1600)
+        actLow:
+          type: ["integer", "null"]
+          description: Lower bound of typical admitted ACT composite (≈25th percentile, 1-36)
+        actHigh:
+          type: ["integer", "null"]
+          description: Upper bound of typical admitted ACT composite (≈75th percentile, 1-36)
         selectivityTier:
           type: string
           enum: [most_selective, highly_selective, selective, accessible]

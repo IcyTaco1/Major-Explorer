@@ -38,6 +38,26 @@ export interface AdmissionsProfile {
    * @nullable
    */
   gpaHigh?: number | null;
+  /**
+   * Lower bound of typical admitted SAT total (≈25th percentile, 400-1600)
+   * @nullable
+   */
+  satLow?: number | null;
+  /**
+   * Upper bound of typical admitted SAT total (≈75th percentile, 400-1600)
+   * @nullable
+   */
+  satHigh?: number | null;
+  /**
+   * Lower bound of typical admitted ACT composite (≈25th percentile, 1-36)
+   * @nullable
+   */
+  actLow?: number | null;
+  /**
+   * Upper bound of typical admitted ACT composite (≈75th percentile, 1-36)
+   * @nullable
+   */
+  actHigh?: number | null;
   selectivityTier: AdmissionsProfileSelectivityTier;
 }
 

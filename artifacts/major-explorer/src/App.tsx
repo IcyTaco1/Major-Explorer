@@ -2159,7 +2159,7 @@ function LandingPage() {
       <header className="w-full py-4 px-6 lg:px-12 flex items-center justify-between border-b border-border bg-card shadow-sm">
         <div className="flex items-center gap-2">
           <Milestone className="w-5 h-5 text-foreground" />
-          <span className="font-serif font-semibold text-lg tracking-tight text-foreground">Next Steps</span>
+          <span className="font-display font-bold text-lg tracking-tight text-foreground">Next Steps</span>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={() => setLocation("/sign-in")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-full hover:bg-muted">
@@ -2176,7 +2176,7 @@ function LandingPage() {
           <Sparkles className="w-3.5 h-3.5" />
           AI-powered college major explorer
         </div>
-        <h1 className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6 leading-tight max-w-3xl">
+        <h1 className="text-5xl md:text-7xl font-display font-bold text-foreground mb-6 leading-tight max-w-3xl">
           Find the major that's right for you.
         </h1>
         <p className="text-xl text-muted-foreground max-w-xl mb-10 leading-relaxed">
@@ -2193,13 +2193,12 @@ function LandingPage() {
 
         <div className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl w-full">
           {[
-            { emoji: "🎯", title: "Personalized quiz", desc: "Answer 5 quick questions to get matched with majors that fit your interests and strengths." },
-            { emoji: "🏛️", title: "Top 10 colleges", desc: "Instantly see the top US universities for any major, with highlights on what makes each one great." },
-            { emoji: "🗓️", title: "4-year course plan", desc: "Click any college to see a realistic 4-year course plan tailored to your major." },
-          ].map(({ emoji, title, desc }) => (
+            { title: "Personalized quiz", desc: "Answer 5 quick questions to get matched with majors that fit your interests and strengths." },
+            { title: "Top 10 colleges", desc: "Instantly see the top US universities for any major, with highlights on what makes each one great." },
+            { title: "4-year course plan", desc: "Click any college to see a realistic 4-year course plan tailored to your major." },
+          ].map(({ title, desc }) => (
             <div key={title} className="bg-card rounded-2xl border border-border p-6 text-left shadow-sm">
-              <div className="text-3xl mb-3">{emoji}</div>
-              <h3 className="font-serif font-bold text-foreground text-lg mb-2">{title}</h3>
+              <h3 className="font-display font-bold text-foreground text-lg mb-2">{title}</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">{desc}</p>
             </div>
           ))}

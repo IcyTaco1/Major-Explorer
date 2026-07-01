@@ -74,7 +74,7 @@ const clerkAppearance = {
     formFieldInput: "bg-background border-border text-foreground focus:border-ring focus:ring-ring",
     footerAction: "border-t border-border",
     dividerLine: "bg-border",
-    alert: "bg-red-50 border border-red-100",
+    alert: "bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50",
     otpCodeFieldInput: "border-border",
     formFieldRow: "",
     main: "",
@@ -781,9 +781,9 @@ function CurriculumModal({ college, major, profile, onClose }: { college: Colleg
 
   const curriculum = getCurriculum.data as CurriculumResponse | undefined;
   const yearColors = [
-    { bg: "bg-blue-50", border: "border-blue-100", badge: "bg-blue-100 text-blue-800", dot: "bg-blue-400" },
-    { bg: "bg-indigo-50", border: "border-indigo-100", badge: "bg-indigo-100 text-indigo-800", dot: "bg-indigo-400" },
-    { bg: "bg-violet-50", border: "border-violet-100", badge: "bg-violet-100 text-violet-800", dot: "bg-violet-400" },
+    { bg: "bg-blue-50 dark:bg-blue-950/40", border: "border-blue-100 dark:border-blue-900/50", badge: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200", dot: "bg-blue-400 dark:bg-blue-500" },
+    { bg: "bg-indigo-50 dark:bg-indigo-950/40", border: "border-indigo-100 dark:border-indigo-900/50", badge: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200", dot: "bg-indigo-400 dark:bg-indigo-500" },
+    { bg: "bg-violet-50 dark:bg-violet-950/40", border: "border-violet-100 dark:border-violet-900/50", badge: "bg-violet-100 text-violet-800 dark:bg-violet-900/50 dark:text-violet-200", dot: "bg-violet-400 dark:bg-violet-500" },
     { bg: "bg-background", border: "border-border", badge: "bg-primary text-primary-foreground", dot: "bg-muted-foreground" },
   ];
 
@@ -909,7 +909,7 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
                   </div>
                   {isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
                 </button>
-                <button onClick={() => onUnsaveMajor(item.majorName)} className="w-9 h-9 rounded-full hover:bg-red-50 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0" title="Remove major">
+                <button onClick={() => onUnsaveMajor(item.majorName)} className="w-9 h-9 rounded-full hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0" title="Remove major">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -940,7 +940,7 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
                               </div>
                               <p className="text-muted-foreground text-xs">{college.location}</p>
                             </div>
-                            <button onClick={() => onUnsaveCollege(item.majorName, college.name)} className="w-7 h-7 rounded-full hover:bg-red-50 flex items-center justify-center text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0" title="Remove">
+                            <button onClick={() => onUnsaveCollege(item.majorName, college.name)} className="w-7 h-7 rounded-full hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0" title="Remove">
                               <X className="w-3.5 h-3.5" />
                             </button>
                           </li>
@@ -1032,7 +1032,7 @@ function MyCollegesView({ myColleges, onRemove, userGpa }: {
                         <p className="text-muted-foreground text-xs">{college.location}</p>
                       </div>
                     </div>
-                    <button onClick={() => onRemove(college.name, majorName)} className="w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0" title="Remove">
+                    <button onClick={() => onRemove(college.name, majorName)} className="w-8 h-8 rounded-full hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0" title="Remove">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </li>
@@ -1070,9 +1070,9 @@ function computeFit(userGpa: number | null, ap: College["admissionsProfile"]): F
 }
 
 const FIT_BADGE: Record<FitTier, { label: string; cls: string }> = {
-  safety: { label: "Safety", cls: "bg-emerald-100 text-emerald-700 ring-emerald-200" },
-  match: { label: "Match", cls: "bg-amber-100 text-amber-700 ring-amber-200" },
-  reach: { label: "Reach", cls: "bg-rose-100 text-rose-700 ring-rose-200" },
+  safety: { label: "Safety", cls: "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:ring-emerald-800" },
+  match: { label: "Match", cls: "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:ring-amber-800" },
+  reach: { label: "Reach", cls: "bg-rose-100 text-rose-700 ring-rose-200 dark:bg-rose-900/40 dark:text-rose-300 dark:ring-rose-800" },
 };
 
 function CollegeFitBadge({ userGpa, admissionsProfile, className = "" }: {
@@ -1122,7 +1122,7 @@ function FilterChips({ label, value, options, onChange }: {
 type CompareRow = {
   key: "gpa" | "sat" | "act";
   label: string;
-  user: number;
+  user: number | null;
   low: number;
   high: number;
   min: number;
@@ -1135,22 +1135,22 @@ function buildCompareRows(profile: UserProfile, ap: College["admissionsProfile"]
   const rows: CompareRow[] = [];
   const gpaFmt = (n: number) => n.toFixed(2);
   const intFmt = (n: number) => String(Math.round(n));
-  if (profile.gpa != null && ap.gpaLow != null && ap.gpaHigh != null) {
+  if (ap.gpaLow != null && ap.gpaHigh != null) {
     rows.push({ key: "gpa", label: "GPA", user: profile.gpa, low: ap.gpaLow, high: ap.gpaHigh, min: 0, max: 4, format: gpaFmt });
   }
-  if (profile.sat != null && ap.satLow != null && ap.satHigh != null) {
+  if (ap.satLow != null && ap.satHigh != null) {
     rows.push({ key: "sat", label: "SAT", user: profile.sat, low: ap.satLow, high: ap.satHigh, min: 400, max: 1600, format: intFmt });
   }
-  if (profile.act != null && ap.actLow != null && ap.actHigh != null) {
+  if (ap.actLow != null && ap.actHigh != null) {
     rows.push({ key: "act", label: "ACT", user: profile.act, low: ap.actLow, high: ap.actHigh, min: 1, max: 36, format: intFmt });
   }
   return rows;
 }
 
 function standing(user: number, low: number, high: number): { label: string; chip: string; dot: string } {
-  if (user > high) return { label: "Above typical", chip: "text-emerald-700 bg-emerald-100 ring-emerald-200", dot: "bg-emerald-500" };
-  if (user < low) return { label: "Below typical", chip: "text-rose-700 bg-rose-100 ring-rose-200", dot: "bg-rose-500" };
-  return { label: "In middle 50%", chip: "text-amber-700 bg-amber-100 ring-amber-200", dot: "bg-amber-500" };
+  if (user > high) return { label: "Above typical", chip: "text-emerald-700 bg-emerald-100 ring-emerald-200 dark:text-emerald-300 dark:bg-emerald-900/40 dark:ring-emerald-800", dot: "bg-emerald-500" };
+  if (user < low) return { label: "Below typical", chip: "text-rose-700 bg-rose-100 ring-rose-200 dark:text-rose-300 dark:bg-rose-900/40 dark:ring-rose-800", dot: "bg-rose-500" };
+  return { label: "In middle 50%", chip: "text-amber-700 bg-amber-100 ring-amber-200 dark:text-amber-300 dark:bg-amber-900/40 dark:ring-amber-800", dot: "bg-amber-500" };
 }
 
 function AdmissionComparison({ profile, admissionsProfile }: {
@@ -1166,36 +1166,42 @@ function AdmissionComparison({ profile, admissionsProfile }: {
         <BarChart3 className="w-4 h-4 text-muted-foreground" />
         <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">How you compare</span>
       </div>
-      <p className="text-xs text-muted-foreground mb-4">Your stats vs the typical admitted student's middle 50%. Estimated figures — a rough guide, not a prediction.</p>
-      {!hasAnyUserStat ? (
-        <p className="text-sm text-muted-foreground">Add your GPA and SAT/ACT in Settings to see how you stack up against each school's typical admitted students.</p>
-      ) : rows.length === 0 ? (
+      <p className="text-xs text-muted-foreground mb-4">The middle 50% of admitted students. Estimated figures — a rough guide, not a prediction.</p>
+      {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">We don't have admitted-student score ranges for this school yet.</p>
       ) : (
-        <div className="space-y-4">
-          {rows.map((r) => {
-            const s = standing(r.user, r.low, r.high);
-            const pos = (v: number) => Math.max(0, Math.min(100, ((v - r.min) / (r.max - r.min)) * 100));
-            const bandLeft = pos(r.low);
-            const bandWidth = Math.min(100 - bandLeft, Math.max(3, pos(r.high) - pos(r.low)));
-            const marker = pos(r.user);
-            return (
-              <div key={r.key} data-testid={`compare-${r.key}`}>
-                <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-                  <div className="text-xs">
-                    <span className="text-sm font-bold text-foreground mr-2">{r.label}</span>
-                    <span className="text-muted-foreground">You <span className="font-semibold text-foreground">{r.format(r.user)}</span> · Typical {r.format(r.low)}–{r.format(r.high)}</span>
+        <>
+          {!hasAnyUserStat && (
+            <p className="text-sm text-muted-foreground mb-4">Add your GPA and SAT/ACT in Settings to see how you stack up against these ranges.</p>
+          )}
+          <div className="space-y-4">
+            {rows.map((r) => {
+              const s = r.user != null ? standing(r.user, r.low, r.high) : null;
+              const pos = (v: number) => Math.max(0, Math.min(100, ((v - r.min) / (r.max - r.min)) * 100));
+              const bandLeft = pos(r.low);
+              const bandWidth = Math.min(100 - bandLeft, Math.max(3, pos(r.high) - pos(r.low)));
+              const marker = r.user != null ? pos(r.user) : null;
+              return (
+                <div key={r.key} data-testid={`compare-${r.key}`}>
+                  <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                    <div className="text-xs">
+                      <span className="text-sm font-bold text-foreground mr-2">{r.label}</span>
+                      <span className="text-muted-foreground">
+                        {r.user != null && (<>You <span className="font-semibold text-foreground">{r.format(r.user)}</span> · </>)}
+                        Typical {r.format(r.low)}–{r.format(r.high)}
+                      </span>
+                    </div>
+                    {s && <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ring-1 ${s.chip}`}>{s.label}</span>}
                   </div>
-                  <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ring-1 ${s.chip}`}>{s.label}</span>
+                  <div className="relative h-2 rounded-full bg-muted">
+                    <div className="absolute top-0 h-2 rounded-full bg-primary/25" style={{ left: `${bandLeft}%`, width: `${bandWidth}%` }} />
+                    {marker != null && s && <div className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full ring-2 ring-card ${s.dot}`} style={{ left: `${marker}%` }} />}
+                  </div>
                 </div>
-                <div className="relative h-2 rounded-full bg-muted">
-                  <div className="absolute top-0 h-2 rounded-full bg-primary/25" style={{ left: `${bandLeft}%`, width: `${bandWidth}%` }} />
-                  <div className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full ring-2 ring-card ${s.dot}`} style={{ left: `${marker}%` }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
@@ -1238,9 +1244,9 @@ function CareerStats({ career }: { career: CareerInfo | null }) {
           <p className="text-xs text-muted-foreground mb-1 font-medium">Entry (10th pct)</p>
           <p className="text-lg font-bold text-foreground" data-testid="text-wage-entry">{formatUSD(career.annualEntryWage)}</p>
         </div>
-        <div className="bg-indigo-50 rounded-xl p-4 text-center ring-1 ring-indigo-100">
-          <p className="text-xs text-indigo-400 mb-1 font-medium">Median</p>
-          <p className="text-lg font-bold text-indigo-700" data-testid="text-wage-median">{formatUSD(career.annualMedianWage)}</p>
+        <div className="bg-indigo-50 dark:bg-indigo-950/40 rounded-xl p-4 text-center ring-1 ring-indigo-100 dark:ring-indigo-900/50">
+          <p className="text-xs text-indigo-400 dark:text-indigo-300 mb-1 font-medium">Median</p>
+          <p className="text-lg font-bold text-indigo-700 dark:text-indigo-300" data-testid="text-wage-median">{formatUSD(career.annualMedianWage)}</p>
         </div>
         <div className="bg-background rounded-xl p-4 text-center">
           <p className="text-xs text-muted-foreground mb-1 font-medium">Experienced (90th pct)</p>
@@ -1250,7 +1256,7 @@ function CareerStats({ career }: { career: CareerInfo | null }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <div className="flex items-center gap-3 bg-background rounded-xl p-4">
-          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${growthPositive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${growthPositive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"}`}>
             <TrendingUp className="w-5 h-5" />
           </div>
           <div>
@@ -1536,10 +1542,10 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
         )}
 
         {isError && (
-          <div className="w-full bg-red-50 border border-red-100 rounded-2xl p-8 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-300">
+          <div className="w-full bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50 rounded-2xl p-8 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-300">
             <AlertCircle className="w-10 h-10 text-red-400 mb-4" />
-            <h3 className="text-xl font-serif text-red-900 mb-2">Could not load results</h3>
-            <p className="text-red-700 max-w-md">We had trouble looking that up. Please check the spelling and try again.</p>
+            <h3 className="text-xl font-serif text-red-900 dark:text-red-200 mb-2">Could not load results</h3>
+            <p className="text-red-700 dark:text-red-300 max-w-md">We had trouble looking that up. Please check the spelling and try again.</p>
           </div>
         )}
 
@@ -1845,7 +1851,7 @@ function UserMenu() {
           </div>
           <button
             onClick={() => signOut({ redirectUrl: basePath || "/" })}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-red-50 hover:text-red-600 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 transition-colors text-left"
           >
             <LogOut className="w-4 h-4" />
             Sign out
@@ -2364,7 +2370,7 @@ function CareersView() {
         </div>
       ) : isError ? (
         <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-          <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mb-4">
+          <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/40 flex items-center justify-center mb-4">
             <AlertCircle className="w-7 h-7 text-rose-500" />
           </div>
           <h3 className="text-lg font-serif font-bold text-foreground mb-1.5">Couldn't load careers</h3>
@@ -2403,7 +2409,7 @@ function CareersView() {
                     <span className="text-xs text-muted-foreground">median / yr</span>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-3">
-                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg ${up ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg ${up ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-rose-50 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"}`}>
                       <TrendingUp className="w-3 h-3" />{up ? "+" : ""}{c.projectedGrowthPct}%
                     </span>
                     <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg bg-muted text-muted-foreground">

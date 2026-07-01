@@ -161,7 +161,7 @@ Requirements:
 - The description must be 5-7 sentences, friendly, simple, and engaging — no academic jargon.
 - DO NOT include any salary, wage, pay, or income figures anywhere in your response. Wages are provided separately from official data.
 - "blsSocCode" MUST be exactly one of the SOC codes from the list below, or "" if none reasonably fit. Do not invent SOC codes.
-- For each college, "admissionsProfile" describes the typical admitted student's high-school GPA (4.0 scale), SAT total (400-1600), and ACT composite (1-36), plus the school's overall admission difficulty. Use realistic values for that specific school. If a school is test-optional or a figure is genuinely unknown, use null for that field.
+- For each college, "admissionsProfile" describes the typical admitted student's high-school GPA (4.0 scale), SAT total (400-1600), and ACT composite (1-36), plus the school's overall admission difficulty. Use realistic values for that specific school. You MUST always provide gpaLow/gpaHigh, satLow/satHigh, and actLow/actHigh as your best estimate of that school's middle-50% range — even for test-optional schools, give the range for students who submitted scores. Do NOT use null for SAT or ACT; every college must include numeric satLow, satHigh, actLow, and actHigh.
 - List exactly 50 colleges ranked 1-50 based on reputation for ${trimmedMajor}, using well-known, reputable US universities only. Every college must be unique (no duplicates), and they must be ordered strictly from strongest (rank 1) to weakest (rank 50) for this specific major.
 - Return only the JSON, nothing else.
 

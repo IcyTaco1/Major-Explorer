@@ -6,6 +6,7 @@ import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useLookupMajor, useGetMajorCurriculum, useChat, useGetCareers } from "@workspace/api-client-react";
 import type { College, CurriculumResponse, ChatMessage, CareerInfo } from "@workspace/api-client-react";
 import {
@@ -13,7 +14,7 @@ import {
   ChevronRight, ChevronDown, ChevronUp, Bookmark, BookmarkCheck,
   Trash2, SortAsc, MessageCircle, Send, Bot, Check, DollarSign,
   LogOut, User, ChevronLeft, Sparkles, TrendingUp, Award, ExternalLink, Briefcase,
-  Settings, SlidersHorizontal, RotateCcw, Sun, Moon
+  Settings, SlidersHorizontal, RotateCcw, Sun, Moon, Monitor, Palette, ShieldCheck, UserCog, type LucideIcon
 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 
@@ -143,15 +144,21 @@ function loadProfile(): UserProfile {
 function persistProfile(data: UserProfile) { localStorage.setItem(PROFILE_KEY, JSON.stringify(data)); }
 
 const THEME_KEY = "next-steps-theme";
-type Theme = "light" | "dark";
+type Theme = "light" | "dark" | "system";
+function systemPrefersDark(): boolean {
+  return typeof window !== "undefined" && !!window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+}
+function resolveTheme(theme: Theme): "light" | "dark" {
+  return theme === "system" ? (systemPrefersDark() ? "dark" : "light") : theme;
+}
 function loadTheme(): Theme {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "system";
   const saved = localStorage.getItem(THEME_KEY);
-  if (saved === "dark" || saved === "light") return saved;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  if (saved === "dark" || saved === "light" || saved === "system") return saved;
+  return "system";
 }
 function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle("dark", theme === "dark");
+  document.documentElement.classList.toggle("dark", resolveTheme(theme) === "dark");
 }
 function persistTheme(theme: Theme) { localStorage.setItem(THEME_KEY, theme); }
 if (typeof document !== "undefined") applyTheme(loadTheme());
@@ -1718,43 +1725,175 @@ function OnboardingProfile({ initial, onComplete, onSkip }: {
   );
 }
 
-function ProfileSettingsModal({ initial, onSave, onClose }: {
+type SettingsSection = "account" | "appearance" | "profile" | "data";
+const SETTINGS_SECTIONS: { id: SettingsSection; label: string; icon: LucideIcon }[] = [
+  { id: "account", label: "Account", icon: User },
+  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "profile", label: "Profile", icon: SlidersHorizontal },
+  { id: "data", label: "Data & privacy", icon: ShieldCheck },
+];
+const THEME_OPTIONS: { value: Theme; label: string; icon: LucideIcon }[] = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "System", icon: Monitor },
+];
+
+function SettingsDialog({ initial, onSaveProfile, theme, onChangeTheme, onRetakeQuiz, onClose }: {
   initial: UserProfile;
-  onSave: (p: UserProfile) => void;
+  onSaveProfile: (p: UserProfile) => void;
+  theme: Theme;
+  onChangeTheme: (t: Theme) => void;
+  onRetakeQuiz: () => void;
   onClose: () => void;
 }) {
-  const state = useGpaGoals(initial);
+  const [section, setSection] = useState<SettingsSection>("account");
+  const { user } = useUser();
+  const { signOut, openUserProfile } = useClerk();
+  const gpaState = useGpaGoals(initial);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current); }, []);
+
+  const displayName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    user?.emailAddresses?.[0]?.emailAddress?.split("@")[0] ||
+    "Your account";
+  const email = user?.emailAddresses?.[0]?.emailAddress ?? "";
+  const initials = (user?.firstName?.[0] || "") + (user?.lastName?.[0] || "");
+
+  const handleSaveProfile = () => {
+    onSaveProfile(gpaState.profile);
+    setSavedFlash(true);
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setSavedFlash(false), 1800);
+  };
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
-      onClick={onClose}
-    >
-      <div
-        className="bg-card rounded-3xl border border-border shadow-2xl w-full max-w-md p-7 animate-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-serif font-bold text-foreground">Your profile</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors" title="Close">
-            <X className="w-4 h-4" />
-          </button>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-3xl w-full h-[600px] max-h-[88vh] p-0 gap-0 flex flex-col overflow-hidden rounded-3xl sm:rounded-3xl bg-card">
+        <DialogDescription className="sr-only">Manage your account, appearance, profile, and data settings.</DialogDescription>
+        <div className="flex items-center px-6 py-4 border-b border-border shrink-0">
+          <DialogTitle className="text-lg font-bold text-foreground">Settings</DialogTitle>
         </div>
-        <GpaGoalsControls state={state} />
-        <div className="flex items-center gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-full border border-border text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors">
-            Cancel
-          </button>
-          <button
-            onClick={() => { onSave(state.profile); onClose(); }}
-            disabled={!state.gpaValid}
-            className="flex-1 px-4 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            data-testid="button-save-profile-settings"
-          >
-            Save
-          </button>
+
+        <div className="flex flex-1 min-h-0 flex-col sm:flex-row">
+          <aside className="shrink-0 border-b sm:border-b-0 sm:border-r border-border p-3 sm:w-52">
+            <nav className="flex sm:flex-col gap-1 overflow-x-auto no-scrollbar">
+              {SETTINGS_SECTIONS.map(({ id, label, icon: Icon }) => {
+                const active = section === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setSection(id)}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                  >
+                    <Icon className="w-4 h-4" /> {label}
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+
+          <div className="flex-1 min-h-0 overflow-y-auto p-6">
+            {section === "account" && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-base font-bold text-foreground mb-1">Account</h3>
+                  <p className="text-sm text-muted-foreground">Manage your account and sign-in details.</p>
+                </div>
+                <div className="flex items-center gap-4 p-4 rounded-2xl border border-border bg-background">
+                  <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-base font-bold shrink-0">
+                    {initials || <User className="w-5 h-5" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+                    {email && <p className="text-sm text-muted-foreground truncate">{email}</p>}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <button onClick={() => openUserProfile()} className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors">
+                    <span className="flex items-center gap-3"><UserCog className="w-4 h-4 text-muted-foreground" /> Manage account</span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                  <button onClick={() => signOut({ redirectUrl: basePath || "/" })} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors">
+                    <LogOut className="w-4 h-4" /> Sign out
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {section === "appearance" && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-base font-bold text-foreground mb-1">Appearance</h3>
+                  <p className="text-sm text-muted-foreground">Customize how Next Steps looks on this device.</p>
+                </div>
+                <div>
+                  <span className="block text-sm font-semibold text-foreground mb-3">Theme</span>
+                  <div className="grid grid-cols-3 gap-3">
+                    {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
+                      const active = theme === value;
+                      return (
+                        <button
+                          key={value}
+                          onClick={() => onChangeTheme(value)}
+                          className={`flex flex-col items-center gap-2 px-3 py-4 rounded-2xl border-2 text-sm font-medium transition-colors ${active ? "border-primary bg-primary/5 text-foreground" : "border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground"}`}
+                        >
+                          <Icon className="w-5 h-5" />
+                          {label}
+                          {active && <span className="text-[11px] font-semibold text-primary flex items-center gap-1"><Check className="w-3 h-3" /> Selected</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3">“System” follows your device's light or dark setting automatically.</p>
+                </div>
+              </div>
+            )}
+
+            {section === "profile" && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-base font-bold text-foreground mb-1">Profile</h3>
+                  <p className="text-sm text-muted-foreground">Used to estimate your Reach / Match / Safety colleges.</p>
+                </div>
+                <GpaGoalsControls state={gpaState} />
+                <div className="pt-1">
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={!gpaState.gpaValid}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    data-testid="button-save-profile-settings"
+                  >
+                    {savedFlash ? <><Check className="w-4 h-4" /> Saved</> : "Save changes"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {section === "data" && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-base font-bold text-foreground mb-1">Data &amp; privacy</h3>
+                  <p className="text-sm text-muted-foreground">Your data stays on this device.</p>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-2xl border border-border bg-background">
+                  <ShieldCheck className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <p className="text-sm text-muted-foreground">Your GPA, goals, saved majors and colleges are stored only in this browser. They're never sent to our servers or used to identify you.</p>
+                </div>
+                <div className="space-y-2">
+                  <button onClick={() => { onRetakeQuiz(); onClose(); }} className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors">
+                    <span className="flex items-center gap-3"><RotateCcw className="w-4 h-4 text-muted-foreground" /> Retake the interest quiz</span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1934,14 +2073,24 @@ function AppShell() {
   const [profile, setProfile] = useState<UserProfile>(loadProfile);
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState<Theme>(loadTheme);
-  const toggleTheme = () => {
-    setTheme((prev) => {
-      const next = prev === "dark" ? "light" : "dark";
-      persistTheme(next);
-      applyTheme(next);
-      return next;
-    });
-  };
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => resolveTheme(loadTheme()));
+  const changeTheme = useCallback((next: Theme) => {
+    setTheme(next);
+    persistTheme(next);
+    applyTheme(next);
+    setResolvedTheme(resolveTheme(next));
+  }, []);
+  const toggleTheme = () => changeTheme(resolvedTheme === "dark" ? "light" : "dark");
+  useEffect(() => {
+    if (theme !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = () => {
+      applyTheme("system");
+      setResolvedTheme(systemPrefersDark() ? "dark" : "light");
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [theme]);
   const [quizState, setQuizState] = useState<"quiz" | "profile" | "results" | "done">(() =>
     localStorage.getItem(QUIZ_DONE_KEY) ? "done" : "quiz"
   );
@@ -2063,15 +2212,15 @@ function AppShell() {
             <button
               onClick={toggleTheme}
               className="w-9 h-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-colors"
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               data-testid="button-toggle-theme"
             >
-              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {resolvedTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
             <button
               onClick={() => setShowSettings(true)}
               className="w-9 h-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-colors"
-              title="Profile & GPA"
+              title="Settings"
               data-testid="button-open-settings"
             >
               <Settings className="w-4 h-4" />
@@ -2115,7 +2264,14 @@ function AppShell() {
       )}
 
       {showSettings && (
-        <ProfileSettingsModal initial={profile} onSave={handleSaveProfile} onClose={() => setShowSettings(false)} />
+        <SettingsDialog
+          initial={profile}
+          onSaveProfile={handleSaveProfile}
+          theme={theme}
+          onChangeTheme={changeTheme}
+          onRetakeQuiz={handleRetakeQuiz}
+          onClose={() => setShowSettings(false)}
+        />
       )}
       <ChatWidget />
     </div>

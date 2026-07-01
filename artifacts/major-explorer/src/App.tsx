@@ -549,6 +549,43 @@ const MAJOR_CATALOG: MajorProfile[] = [
   { name: "Law", activity: ["leading", "analyzing"], environment: ["desk"], strength: ["writing"], impact: ["policy"], subject: ["history", "english"] },
 ];
 
+// ─── Major search autocomplete ────────────────────────────────────────
+// Deduped, sorted list of known majors used to power the search suggestions.
+const ALL_MAJORS: string[] = Array.from(
+  new Set([...POPULAR_MAJORS, ...MAJOR_CATALOG.map((m) => m.name)])
+).sort((a, b) => a.localeCompare(b));
+
+// Prefix matches rank above substring matches; the exact-typed name is dropped
+// (no point suggesting what the user already typed in full).
+function matchMajors(query: string): string[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const starts: string[] = [];
+  const contains: string[] = [];
+  for (const name of ALL_MAJORS) {
+    const l = name.toLowerCase();
+    if (l === q) continue;
+    if (l.startsWith(q)) starts.push(name);
+    else if (l.includes(q)) contains.push(name);
+  }
+  return [...starts, ...contains].slice(0, 7);
+}
+
+// Renders a suggestion with the matched portion emphasized (Google-style).
+function renderMajorMatch(name: string, query: string): React.ReactNode {
+  const q = query.trim();
+  if (!q) return name;
+  const idx = name.toLowerCase().indexOf(q.toLowerCase());
+  if (idx === -1) return name;
+  return (
+    <>
+      {name.slice(0, idx)}
+      <span className="font-semibold text-foreground">{name.slice(idx, idx + q.length)}</span>
+      {name.slice(idx + q.length)}
+    </>
+  );
+}
+
 // Concise phrases describing each selection, used to explain matches.
 const SEL_ACTIVITY: Record<string, string> = {
   building: "building and fixing things", helping: "helping people", analyzing: "analyzing data and patterns", creating: "creating and designing", leading: "leading projects",
@@ -1057,6 +1094,30 @@ function CollegeFitBadge({ userGpa, admissionsProfile, className = "" }: {
   );
 }
 
+// ─── Filter chips (fit / selectivity) ─────────────────────────────────
+function FilterChips({ label, value, options, onChange }: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mr-1 min-w-[68px]">{label}</span>
+      {options.map((o) => (
+        <button
+          key={o.value}
+          onClick={() => onChange(o.value)}
+          className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${value === o.value ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground"}`}
+          data-testid={`filter-${label.toLowerCase()}-${o.value}`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ─── Admission comparison (your GPA/SAT/ACT vs typical admitted) ───────
 type CompareRow = {
   key: "gpa" | "sat" | "act";
@@ -1239,6 +1300,11 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
   const [selectedCollege, setSelectedCollege] = useState<College | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchBoxRef = useRef<HTMLDivElement>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const [fitFilter, setFitFilter] = useState<FitTier | "all">("all");
+  const [selFilter, setSelFilter] = useState<string>("all");
   const lookupMajor = useLookupMajor();
 
   useEffect(() => {
@@ -1253,27 +1319,60 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setOpenDropdown(null);
       }
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const resetFilters = () => { setFitFilter("all"); setSelFilter("all"); };
+
   const handleSearch = () => {
     if (!inputValue.trim()) return;
     setSelectedCollege(null);
     setOpenDropdown(null);
+    setShowSuggestions(false);
+    setActiveIdx(-1);
+    resetFilters();
     lookupMajor.mutate({ data: { major: inputValue } });
     setCurrentMajor(inputValue.trim());
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter") handleSearch(); };
 
   const setSuggestedMajor = (major: string) => {
     setInputValue(major);
     setSelectedCollege(null);
     setOpenDropdown(null);
+    setShowSuggestions(false);
+    setActiveIdx(-1);
+    resetFilters();
     lookupMajor.mutate({ data: { major } });
     setCurrentMajor(major);
+  };
+
+  const suggestions = showSuggestions ? matchMajors(inputValue) : [];
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") {
+      if (suggestions.length === 0) return;
+      e.preventDefault();
+      setShowSuggestions(true);
+      setActiveIdx((i) => (i + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      if (suggestions.length === 0) return;
+      e.preventDefault();
+      setActiveIdx((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+    } else if (e.key === "Enter") {
+      if (showSuggestions && activeIdx >= 0 && suggestions[activeIdx]) {
+        setSuggestedMajor(suggestions[activeIdx]);
+      } else {
+        handleSearch();
+      }
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+      setActiveIdx(-1);
+    }
   };
 
   const isMajorSaved = (majorName: string) => !!saved[majorName];
@@ -1326,12 +1425,18 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
   const isError = lookupMajor.isError;
   const result = lookupMajor.data;
 
+  const filteredColleges = (result?.topColleges ?? []).filter((c) => {
+    if (userGpa != null && fitFilter !== "all" && computeFit(userGpa, c.admissionsProfile) !== fitFilter) return false;
+    if (selFilter !== "all" && c.admissionsProfile?.selectivityTier !== selFilter) return false;
+    return true;
+  });
+
   return (
     <main className="flex-1 flex flex-col items-center pt-14 md:pt-20 px-4 pb-24">
       <div className="w-full max-w-3xl flex flex-col items-center text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif text-foreground font-bold mb-5 leading-tight">Discover your academic path.</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mb-8">Explore college majors, understand their focus, and discover the top universities renowned for these programs.</p>
-        <div className="w-full max-w-2xl relative flex items-center group">
+        <div ref={searchBoxRef} className="w-full max-w-2xl relative flex items-center group">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-muted-foreground group-focus-within:text-muted-foreground transition-colors" />
           </div>
@@ -1340,8 +1445,15 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
             className="block w-full pl-12 pr-32 py-4 md:py-5 border border-border rounded-full text-lg shadow-sm focus:ring-2 focus:ring-ring focus:border-ring transition-all bg-card text-foreground placeholder:text-muted-foreground"
             placeholder="e.g. Finance, Computer Science, Nursing..."
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={(e) => { setInputValue(e.target.value); setShowSuggestions(true); setActiveIdx(-1); }}
+            onFocus={() => { if (inputValue.trim()) setShowSuggestions(true); }}
             onKeyDown={handleKeyDown}
+            autoComplete="off"
+            role="combobox"
+            aria-expanded={suggestions.length > 0}
+            aria-autocomplete="list"
+            aria-controls="major-suggestions-list"
+            aria-activedescendant={activeIdx >= 0 ? `major-suggestion-${activeIdx}` : undefined}
             data-testid="input-major"
           />
           <div className="absolute inset-y-0 right-2 flex items-center">
@@ -1349,6 +1461,25 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
               {isLoading ? <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-white rounded-full animate-spin" /> : "Explore"}
             </button>
           </div>
+          {suggestions.length > 0 && (
+            <div id="major-suggestions-list" role="listbox" className="absolute z-40 top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-xl overflow-hidden py-2 animate-in fade-in slide-in-from-top-1 duration-150" data-testid="major-suggestions">
+              {suggestions.map((s, i) => (
+                <button
+                  key={s}
+                  id={`major-suggestion-${i}`}
+                  role="option"
+                  aria-selected={i === activeIdx}
+                  onMouseDown={(e) => { e.preventDefault(); setSuggestedMajor(s); }}
+                  onMouseEnter={() => setActiveIdx(i)}
+                  className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-colors ${i === activeIdx ? "bg-muted" : "hover:bg-muted"}`}
+                  data-testid={`suggestion-${i}`}
+                >
+                  <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-foreground text-base">{renderMajorMatch(s, inputValue)}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1417,10 +1548,47 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
               <GraduationCap className="w-6 h-6 text-foreground" />
               <h3 className="text-2xl font-serif text-foreground font-bold">Top Colleges</h3>
             </div>
-            <p className="text-sm text-muted-foreground mb-6">Click a college to see its 4-year course plan. Use the bookmark to save it to a list.</p>
+            <p className="text-sm text-muted-foreground mb-4">Click a college to see its 4-year course plan. Use the bookmark to save it to a list.</p>
+
+            <div className="mb-5 bg-card border border-border rounded-2xl p-4 space-y-3">
+              {userGpa != null ? (
+                <FilterChips
+                  label="Fit"
+                  value={fitFilter}
+                  options={[
+                    { value: "all", label: "All" },
+                    { value: "reach", label: "Reach" },
+                    { value: "match", label: "Match" },
+                    { value: "safety", label: "Safety" },
+                  ]}
+                  onChange={(v) => setFitFilter(v as FitTier | "all")}
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground">Add your GPA in Settings to filter by Reach / Match / Safety.</p>
+              )}
+              <FilterChips
+                label="Selectivity"
+                value={selFilter}
+                options={[
+                  { value: "all", label: "All" },
+                  { value: "most_selective", label: "Most selective" },
+                  { value: "highly_selective", label: "Highly selective" },
+                  { value: "selective", label: "Selective" },
+                  { value: "accessible", label: "Accessible" },
+                ]}
+                onChange={setSelFilter}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mb-4" data-testid="text-filter-count">Showing {filteredColleges.length} of {result.topColleges.length} colleges</p>
 
             <div ref={dropdownRef} className="space-y-4" data-testid="list-top-colleges">
-              {result.topColleges.map((college, index) => {
+              {filteredColleges.length === 0 && (
+                <div className="bg-card border border-border rounded-2xl p-8 text-center" data-testid="empty-filtered">
+                  <p className="text-muted-foreground mb-3">No colleges match these filters.</p>
+                  <button onClick={resetFilters} className="text-primary font-medium hover:underline" data-testid="button-clear-filters">Clear filters</button>
+                </div>
+              )}
+              {filteredColleges.map((college, index) => {
                 const anySaved = isAnywhereSaved(result.major, college.name);
                 const inSaved = isInSaved(result.major, college.name);
                 const inMyColleges = isInMyColleges(college.name, result.major);

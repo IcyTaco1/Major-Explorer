@@ -160,7 +160,6 @@ if (typeof document !== "undefined") applyTheme(loadTheme());
 interface QuizQuestion {
   id: string;
   question: string;
-  emoji: string;
   options: { label: string; value: string }[];
 }
 
@@ -173,7 +172,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "activity",
       question: "You finally have a free weekend. What are you itching to do?",
-      emoji: "🌅",
       options: [
         { label: "Take something apart to see how it works", value: "building" },
         { label: "Show up for a friend who needs me", value: "helping" },
@@ -185,7 +183,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "environment",
       question: "Picture the space where you feel most 'in the zone.'",
-      emoji: "🪟",
       options: [
         { label: "A quiet lab surrounded by experiments", value: "lab" },
         { label: "Outdoors, moving between people and places", value: "field" },
@@ -197,7 +194,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "strength",
       question: "Your friends always come to you for…?",
-      emoji: "🤝",
       options: [
         { label: "Cracking a tricky logic or numbers problem", value: "math" },
         { label: "Putting their messy thoughts into words", value: "writing" },
@@ -209,7 +205,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "impact",
       question: "In 20 years, you'd be proudest if you had…?",
-      emoji: "🏆",
       options: [
         { label: "Invented something that pushes tech forward", value: "science" },
         { label: "Helped thousands live healthier lives", value: "health" },
@@ -221,7 +216,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "subject",
       question: "Which class never really felt like work?",
-      emoji: "📖",
       options: [
         { label: "Science labs (Bio, Chem, Physics)", value: "science" },
         { label: "Math problem sets", value: "math" },
@@ -236,7 +230,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "activity",
       question: "You join a scrappy startup. Which role do you grab first?",
-      emoji: "🚀",
       options: [
         { label: "The one who builds the actual product", value: "building" },
         { label: "The one who supports the team and customers", value: "helping" },
@@ -248,7 +241,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "environment",
       question: "On the office tour, which room makes you go 'yes, this one'?",
-      emoji: "🚪",
       options: [
         { label: "The research lab full of equipment", value: "lab" },
         { label: "There's no office — you're always on site", value: "field" },
@@ -260,7 +252,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "strength",
       question: "A group project is falling apart. What do you bring?",
-      emoji: "🧩",
       options: [
         { label: "Logic to crack the hard technical part", value: "math" },
         { label: "Clear writing to pull it all together", value: "writing" },
@@ -272,7 +263,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "impact",
       question: "A genie grants one change to the world. You pick…?",
-      emoji: "🧞",
       options: [
         { label: "Faster scientific breakthroughs", value: "science" },
         { label: "Healthier people everywhere", value: "health" },
@@ -284,7 +274,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "subject",
       question: "Flipping through old report cards, your eyes light up at…?",
-      emoji: "🗂️",
       options: [
         { label: "Science", value: "science" },
         { label: "Math", value: "math" },
@@ -299,7 +288,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "activity",
       question: "What kind of video rabbit hole do you fall into?",
-      emoji: "📺",
       options: [
         { label: "How things are made / engineering builds", value: "building" },
         { label: "Heartwarming stories and self-improvement", value: "helping" },
@@ -311,7 +299,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "environment",
       question: "Your ideal commute ends at…?",
-      emoji: "🚇",
       options: [
         { label: "A lab with your name on a project", value: "lab" },
         { label: "Wherever the work takes you that day", value: "field" },
@@ -323,7 +310,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "strength",
       question: "Pick the 'superpower' that already feels kind of real for you:",
-      emoji: "⚡",
       options: [
         { label: "Solving any number or logic puzzle", value: "math" },
         { label: "Saying exactly the right thing", value: "writing" },
@@ -335,7 +321,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "impact",
       question: "Which headline would you most want to be about you?",
-      emoji: "📰",
       options: [
         { label: "'Breakthrough discovery changes the field'", value: "science" },
         { label: "'New approach saves countless lives'", value: "health" },
@@ -347,7 +332,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "subject",
       question: "Which homework did you secretly enjoy?",
-      emoji: "✏️",
       options: [
         { label: "Science labs and reports", value: "science" },
         { label: "Math problem sets", value: "math" },
@@ -362,7 +346,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "activity",
       question: "Stranded on an island with a group — what's your job?",
-      emoji: "🏝️",
       options: [
         { label: "Build the shelter and tools", value: "building" },
         { label: "Keep everyone's spirits and health up", value: "helping" },
@@ -374,7 +357,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "environment",
       question: "Where do you do your best thinking?",
-      emoji: "💭",
       options: [
         { label: "Somewhere precise and controlled", value: "lab" },
         { label: "Out in the real world, hands-on", value: "field" },
@@ -386,7 +368,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "strength",
       question: "What's the compliment you get most often?",
-      emoji: "💬",
       options: [
         { label: "'You're so logical'", value: "math" },
         { label: "'You explain things really well'", value: "writing" },
@@ -398,7 +379,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "impact",
       question: "What problem keeps you up at night wanting to fix it?",
-      emoji: "🌙",
       options: [
         { label: "Unsolved science and tech challenges", value: "science" },
         { label: "People suffering from illness", value: "health" },
@@ -410,7 +390,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "subject",
       question: "If school had only one subject forever, you'd pick…?",
-      emoji: "🎓",
       options: [
         { label: "Science", value: "science" },
         { label: "Math", value: "math" },
@@ -425,7 +404,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "activity",
       question: "Your phone's most-used app is probably…?",
-      emoji: "📱",
       options: [
         { label: "A tinkering, DIY, or coding app", value: "building" },
         { label: "Messaging — I'm always checking on people", value: "helping" },
@@ -437,7 +415,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "environment",
       question: "A dream job listing pops up. Which location line sells you?",
-      emoji: "🧭",
       options: [
         { label: "'On-site research laboratory'", value: "lab" },
         { label: "'Fieldwork / travel required'", value: "field" },
@@ -449,7 +426,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "strength",
       question: "You've got 50 browser tabs open. Most are about…?",
-      emoji: "🗂️",
       options: [
         { label: "Puzzles, data, and how things work", value: "math" },
         { label: "Articles, blogs, and things to read", value: "writing" },
@@ -461,7 +437,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "impact",
       question: "You're given a TED talk. Your topic is…?",
-      emoji: "🎤",
       options: [
         { label: "The next big scientific frontier", value: "science" },
         { label: "How we can all live healthier", value: "health" },
@@ -473,7 +448,6 @@ const QUIZ_VERSIONS: QuizQuestion[][] = [
     {
       id: "subject",
       question: "Which textbook would you actually keep?",
-      emoji: "📚",
       options: [
         { label: "Science", value: "science" },
         { label: "Math", value: "math" },
@@ -675,8 +649,7 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
 
         {/* Question card */}
         <div className="bg-card rounded-3xl border border-border shadow-sm p-8 animate-in fade-in slide-in-from-bottom-4 duration-400">
-          <div className="text-4xl mb-4 text-center">{question.emoji}</div>
-          <h2 className="text-xl font-serif font-bold text-foreground text-center mb-6">{question.question}</h2>
+          <h2 className="text-xl font-bold text-foreground text-center mb-6">{question.question}</h2>
           <div className="space-y-3">
             {question.options.map((opt) => (
               <button
@@ -722,8 +695,7 @@ function QuizResults({ majors, onExplore, onDismiss }: { majors: MajorSuggestion
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg text-center">
-        <div className="text-5xl mb-5">🎉</div>
-        <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-3">Your top matches!</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Your top matches!</h1>
         <p className="text-muted-foreground mb-8">Based on your interests, here are the majors we think you'll love — and why. Click one to explore it.</p>
         <div className="space-y-3 mb-8">
           {majors.map((item, i) => (
@@ -1585,7 +1557,6 @@ function SuggestedView({ results, onExplore, onRetake }: {
   if (results.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center px-4">
-        <div className="text-5xl mb-5">🎯</div>
         <h3 className="text-xl font-bold text-foreground mb-2">No suggestions yet</h3>
         <p className="text-muted-foreground max-w-sm mb-8">Take the quiz to get personalized major recommendations based on your interests.</p>
         <button onClick={onRetake} className="flex items-center gap-2 bg-primary text-primary-foreground text-sm font-semibold px-6 py-3 rounded-full hover:bg-primary/90 transition-colors">

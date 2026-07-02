@@ -33,6 +33,16 @@ use `@react-three/fiber@9` + `@react-three/drei@10` (fiber v8/drei v9 are React 
   the constructor object type-errors. Use `THREE.MathUtils.degToRad` (no deep
   `three/src/...` import needed).
 
+## The beam base color (`diffuse`) is the main light-vs-dark lever
+Beams' body color is the ShaderMaterial `diffuse` uniform, NOT `lightColor`
+(which only tints lit edges). A **black** diffuse looks great on the deep-navy
+dark backdrop but renders as muddy dark-gray streaks over a white/light-mode
+background — the #1 "light mode looks weird" complaint. Fix: make the base color
+theme-aware — black in dark mode, a soft light pastel (e.g. periwinkle #b4c0ff)
+in light mode — and drive it as a reactive uniform: `beamMaterial.uniforms
+.diffuse.value.set(baseColor)` in a `useEffect`, so theme toggles never rebuild
+the material (keep it out of the material's useMemo deps).
+
 ## Theme-aware colors without Canvas remount
 Observe the `dark` class on `document.documentElement` via `MutationObserver`
 (`attributeFilter:["class"]`) — that's how the theme system toggles it. Pass the

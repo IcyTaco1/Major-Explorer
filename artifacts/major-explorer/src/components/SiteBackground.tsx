@@ -64,14 +64,14 @@ class WebGLBoundary extends Component<
   }
 }
 
-const LIGHT = { background: "#eef1f8", light: "#7c8cff" };
-const DARK = { background: "#0b1120", light: "#9aa7ff" };
+const LIGHT = { background: "#f4f6fc", light: "#e6ebff", base: "#b4c0ff" };
+const DARK = { background: "#0b1120", light: "#9aa7ff", base: "#000000" };
 
 /**
  * Fixed, full-viewport animated Beams background rendered behind the entire
- * app. Uses a cool indigo-on-white palette in light mode and a brighter
- * indigo-on-deep-navy palette in dark mode. A theme-aware scrim keeps content
- * readable.
+ * app. Light mode uses soft periwinkle beams on a near-white backdrop; dark
+ * mode uses black beams lit by indigo on a deep-navy backdrop. A theme-aware
+ * scrim keeps content readable.
  */
 export default function SiteBackground() {
   const isDark = useIsDark();
@@ -88,6 +88,7 @@ export default function SiteBackground() {
           <Beams
             backgroundColor={palette.background}
             lightColor={palette.light}
+            baseColor={palette.base}
             beamNumber={12}
             beamWidth={2}
             beamHeight={15}

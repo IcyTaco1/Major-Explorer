@@ -180,6 +180,7 @@ export interface BeamsProps {
   beamHeight?: number;
   beamNumber?: number;
   lightColor?: string;
+  baseColor?: string;
   backgroundColor?: string;
   speed?: number;
   noiseIntensity?: number;
@@ -193,6 +194,7 @@ export default function Beams({
   beamHeight = 15,
   beamNumber = 12,
   lightColor = "#ffffff",
+  baseColor = "#000000",
   backgroundColor = "#000000",
   speed = 2,
   noiseIntensity = 1.75,
@@ -257,6 +259,11 @@ export default function Beams({
       }),
     [speed, noiseIntensity, scale],
   );
+
+  useEffect(() => {
+    const u = beamMaterial.uniforms.diffuse;
+    if (u?.value instanceof THREE.Color) u.value.set(baseColor);
+  }, [beamMaterial, baseColor]);
 
   return (
     <CanvasWrapper animate={animate}>

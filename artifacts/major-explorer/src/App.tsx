@@ -11,7 +11,6 @@ import RevealBorderGlow from "@/components/RevealBorderGlow";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ScrollReveal from "@/components/ScrollReveal";
-import GradualBlur from "@/components/GradualBlur";
 import PillNav, { type PillNavItem } from "@/components/PillNav";
 import TiltedCard from "@/components/TiltedCard";
 import { useLookupMajor, useGetMajorCurriculum, useChat, useGetCareers } from "@workspace/api-client-react";
@@ -772,7 +771,6 @@ function QuizResults({ majors, onExplore, onDismiss }: { majors: MajorSuggestion
                 </span>
                 <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
               </button>
-              <CardBlur />
               </RevealBorderGlow>
             </TiltedCard>
           ))}
@@ -966,7 +964,6 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
                 </div>
               )}
               </div>
-              <CardBlur />
               </RevealBorderGlow>
             </TiltedCard>
           );
@@ -1057,7 +1054,6 @@ function MyCollegesView({ myColleges, onRemove, userGpa }: {
                 ))}
               </ul>
               </div>
-              <CardBlur />
               </RevealBorderGlow>
             </TiltedCard>
           );
@@ -1713,7 +1709,6 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                         <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
                       </div>
                     </div>
-                    <CardBlur />
                     </RevealBorderGlow>
                   </TiltedCard>
                 );
@@ -1950,7 +1945,6 @@ function SuggestedView({ results, onExplore, onRetake }: {
               </span>
               <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
             </button>
-            <CardBlur />
             </RevealBorderGlow>
           </TiltedCard>
         ))}
@@ -2333,28 +2327,6 @@ const GROWTH_OPTIONS = [
   { label: "20%+ (much faster)", value: 20 },
 ];
 
-// Soft progressive blur that fades the bottom edge of every card. zIndex is
-// kept low (2) so it sits above the card's own content (blurring it via
-// backdrop-filter) but below interactive overlays like the save dropdown (z-30).
-// The blur self-clips to the card's rounded bottom via its own overflow:hidden.
-const CARD_BLUR_STYLE = { borderBottomLeftRadius: "1rem", borderBottomRightRadius: "1rem" } as const;
-
-function CardBlur() {
-  return (
-    <GradualBlur
-      target="parent"
-      position="bottom"
-      height="1.75rem"
-      strength={2}
-      divCount={4}
-      curve="bezier"
-      opacity={1}
-      zIndex={2}
-      style={CARD_BLUR_STYLE}
-    />
-  );
-}
-
 function CareerCard({ c }: { c: CareerInfo }) {
   const revealRef = useScrollReveal<HTMLDivElement>();
   const up = c.projectedGrowthPct >= 0;
@@ -2384,7 +2356,6 @@ function CareerCard({ c }: { c: CareerInfo }) {
       <div className="text-xs text-muted-foreground mt-auto pt-1">
         Entry {formatUSD(c.annualEntryWage)} · Experienced {formatUSD(c.annualExperiencedWage)}
       </div>
-      <CardBlur />
     </div>
     </TiltedCard>
   );

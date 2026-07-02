@@ -1,27 +1,18 @@
 ---
-name: GradualBlur (backdrop-filter) overlay on cards
-description: Non-obvious decisions for putting a React Bits GradualBlur / backdrop-filter fade on every card, especially BorderGlow cards.
+name: Card bottom-fade blur was removed (do not reintroduce)
+description: The GradualBlur backdrop-filter bottom-fade on Major Explorer cards was removed at the user's request; plus the reusable technique notes in case it is ever wanted again.
 ---
 
-# GradualBlur backdrop-filter overlay on cards
+# Card bottom-fade blur — removed by user request
 
-Applying a progressive `backdrop-filter` blur strip to the bottom edge of every card in Major Explorer.
+Major Explorer cards briefly had a progressive `backdrop-filter` blur strip fading the bottom edge of every card (a shared `CardBlur` wrapper around React Bits `GradualBlur`, used at all card sites).
 
-## Self-clip the overlay; do NOT add overflow:hidden to the card
-BorderGlow cards are intentionally `overflow: visible` (the glow bleeds outside the border) and the college-results card has an absolutely-positioned save dropdown that extends past the card. Adding `overflow: hidden` to the card to clip the blur to rounded corners would clip BOTH the glow and the dropdown.
+**Decision:** the user explicitly asked to remove that blurred bottom edge "everywhere." The `CardBlur` component, all its usages, and the `GradualBlur.tsx`/`.css` files were deleted.
+**Why:** the user did not like the faded/blurred bottom of the cards (it made the last line of card content look cut off / smudged).
+**How to apply:** do NOT reintroduce a bottom-fade / backdrop-filter blur strip on these cards unless the user asks for it again.
 
-**Rule:** let the blur overlay clip ITSELF — give its root `overflow: hidden` (React Bits `.gradual-blur-parent` already does) plus an explicit bottom `border-radius` matching the card (1rem / 16px here). Then a rectangular blur strip won't blur the page background outside the rounded corners, and the card keeps `overflow: visible`.
-
-**Why:** a bottom blur strip is a rectangle; without clipping, its square corners blur the background beyond the card's rounded corners.
-
-## z-index: above content, below interactive overlays
-Use a LOW zIndex (2), not the component's default 1000. The blur must paint above the card's own content (z-auto) so `backdrop-filter` samples/blurs it, but below the save dropdown (z-30) so the dropdown is neither blurred nor covered. `backdrop-filter` only samples content painted BEFORE the element, so a z-30 dropdown painted after a z-2 blur stays crisp even if they overlap on a short card. Keep the overlay `pointer-events: none`.
-
-## Anchoring inside BorderGlow
-The blur is rendered as a child of `.border-glow-inner` (position: relative), so `position:absolute; bottom:0` aligns to the inner container, which fills the card just inside its 1px border — visually indistinguishable from the card edge.
-
-## Don't install mathjs
-The React Bits GradualBlur source lists `mathjs` as a dependency but only uses native `Math.pow`/`Math.round`. Do not install mathjs.
-
-## Perf
-`backdrop-filter` is GPU-expensive. Careers view renders up to 60 cards with no virtualization; keep `divCount` small (3–4) since each extra layer is another backdrop-filter element per card (~240 total at divCount 4). Hoist any inline `style` object passed to the memoized GradualBlur to a module constant, or `React.memo` is defeated.
+## Reusable technique notes (only if it is ever wanted again)
+- Self-clip the overlay (give it its own `overflow:hidden` + matching bottom `border-radius`); do NOT add `overflow:hidden` to the card — BorderGlow cards are `overflow:visible` and the college card's save dropdown overflows.
+- Use a LOW zIndex (~2): above card content so `backdrop-filter` samples it, but below the z-30 save dropdown so the dropdown stays crisp and clickable. Keep it `pointer-events:none`.
+- `backdrop-filter` is GPU-expensive; the careers view renders ~60 cards unvirtualized, so keep `divCount` small (3–4) and hoist any inline style object to a module constant so `React.memo` holds.
+- The React Bits GradualBlur source lists `mathjs` but only uses native `Math` — do not install mathjs.

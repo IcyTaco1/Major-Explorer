@@ -2,6 +2,7 @@ import {
   useRef,
   useCallback,
   useEffect,
+  forwardRef,
   type ReactNode,
   type CSSProperties,
   type HTMLAttributes,
@@ -100,7 +101,7 @@ export interface BorderGlowProps extends Omit<HTMLAttributes<HTMLDivElement>, "c
   [dataAttribute: `data-${string}`]: unknown;
 }
 
-const BorderGlow = ({
+const BorderGlow = forwardRef<HTMLDivElement, BorderGlowProps>(({
   children,
   className = "",
   edgeSensitivity = 30,
@@ -115,8 +116,16 @@ const BorderGlow = ({
   fillOpacity = 0.5,
   style,
   ...rest
-}: BorderGlowProps) => {
+}: BorderGlowProps, forwardedRef) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const setRefs = useCallback(
+    (node: HTMLDivElement | null) => {
+      cardRef.current = node;
+      if (typeof forwardedRef === "function") forwardedRef(node);
+      else if (forwardedRef) forwardedRef.current = node;
+    },
+    [forwardedRef],
+  );
 
   const getCenterOfElement = useCallback((el: HTMLElement): [number, number] => {
     const { width, height } = el.getBoundingClientRect();
@@ -217,7 +226,7 @@ const BorderGlow = ({
 
   return (
     <div
-      ref={cardRef}
+      ref={setRefs}
       onPointerMove={handlePointerMove}
       className={`border-glow-card ${className}`.trim()}
       style={{ ...styleVars, ...style } as CSSProperties}
@@ -227,6 +236,8 @@ const BorderGlow = ({
       <div className="border-glow-inner">{children}</div>
     </div>
   );
-};
+});
+
+BorderGlow.displayName = "BorderGlow";
 
 export default BorderGlow;

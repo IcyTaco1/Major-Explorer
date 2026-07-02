@@ -7,7 +7,9 @@ import { shadcn } from "@clerk/themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import BorderGlow from "@/components/BorderGlow";
+import RevealBorderGlow from "@/components/RevealBorderGlow";
+import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ScrollReveal from "@/components/ScrollReveal";
 import { useLookupMajor, useGetMajorCurriculum, useChat, useGetCareers } from "@workspace/api-client-react";
 import type { College, CurriculumResponse, ChatMessage, CareerInfo } from "@workspace/api-client-react";
@@ -752,7 +754,7 @@ function QuizResults({ majors, onExplore, onDismiss }: { majors: MajorSuggestion
         <p className="text-muted-foreground mb-8">Based on your interests, here are the majors we think you'll love — and why. Click one to explore it.</p>
         <div className="space-y-3 mb-8">
           {majors.map((item, i) => (
-            <BorderGlow key={item.major} className="group">
+            <RevealBorderGlow key={item.major} className="group">
               <button
                 onClick={() => onExplore(item.major)}
                 className="w-full flex items-start gap-4 p-5 text-left rounded-2xl"
@@ -766,7 +768,7 @@ function QuizResults({ majors, onExplore, onDismiss }: { majors: MajorSuggestion
                 </span>
                 <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
               </button>
-            </BorderGlow>
+            </RevealBorderGlow>
           ))}
         </div>
         <button onClick={onDismiss} className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
@@ -900,7 +902,7 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
           const mode = getSortMode(item.majorName);
           const colleges = sortedColleges(item.colleges, mode);
           return (
-            <BorderGlow key={item.majorName}>
+            <RevealBorderGlow key={item.majorName}>
               <div className="bg-card rounded-2xl overflow-hidden">
               <div className="flex items-center gap-3 p-5 md:p-6">
                 <button onClick={() => toggleExpand(item.majorName)} className="flex-1 flex items-center gap-3 text-left min-w-0">
@@ -957,7 +959,7 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
                 </div>
               )}
               </div>
-            </BorderGlow>
+            </RevealBorderGlow>
           );
         })}
       </div>
@@ -1007,7 +1009,7 @@ function MyCollegesView({ myColleges, onRemove, userGpa }: {
           const mode = getSortMode(majorName);
           const sorted = mode === "alpha" ? [...colleges].sort((a, b) => a.name.localeCompare(b.name)) : [...colleges].sort((a, b) => a.rank - b.rank);
           return (
-            <BorderGlow key={majorName}>
+            <RevealBorderGlow key={majorName}>
               <div className="bg-card rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-5 md:px-6 py-4 bg-background border-b border-border">
                 <div className="flex items-center gap-3">
@@ -1045,7 +1047,7 @@ function MyCollegesView({ myColleges, onRemove, userGpa }: {
                 ))}
               </ul>
               </div>
-            </BorderGlow>
+            </RevealBorderGlow>
           );
         })}
       </div>
@@ -1457,6 +1459,12 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
     dropdownRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // Recompute reveal trigger positions when the college list changes (filters,
+  // pagination, or a new major lookup) so shifted cards still reveal correctly.
+  useEffect(() => {
+    ScrollTrigger.refresh();
+  }, [filteredColleges.length, currentPage, result?.major]);
+
   return (
     <main className="flex-1 flex flex-col items-center pt-14 md:pt-20 px-4 pb-24">
       <div className="w-full max-w-3xl flex flex-col items-center text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -1634,9 +1642,9 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                 const isOpen = openDropdown === dropKey;
 
                 return (
-                  <BorderGlow
+                  <RevealBorderGlow
                     key={college.rank}
-                    className={`group animate-in fade-in slide-in-from-bottom-4 stagger-${index+1} fill-mode-both ${isOpen ? "relative z-20" : ""}`}
+                    className={`group ${isOpen ? "relative z-20" : ""}`}
                     data-testid={`item-college-${college.rank}`}
                   >
                     <div className="flex gap-4 md:gap-6 p-5 md:p-6">
@@ -1691,7 +1699,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                         <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
                       </div>
                     </div>
-                  </BorderGlow>
+                  </RevealBorderGlow>
                 );
               })}
             </div>
@@ -1911,7 +1919,7 @@ function SuggestedView({ results, onExplore, onRetake }: {
       </div>
       <div className="space-y-3">
         {results.map((item, i) => (
-          <BorderGlow key={item.major} className="group">
+          <RevealBorderGlow key={item.major} className="group">
             <button
               onClick={() => onExplore(item.major)}
               className="w-full flex items-start gap-4 p-5 text-left rounded-2xl"
@@ -1925,7 +1933,7 @@ function SuggestedView({ results, onExplore, onRetake }: {
               </span>
               <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
             </button>
-          </BorderGlow>
+          </RevealBorderGlow>
         ))}
       </div>
     </div>
@@ -2306,6 +2314,38 @@ const GROWTH_OPTIONS = [
   { label: "20%+ (much faster)", value: 20 },
 ];
 
+function CareerCard({ c }: { c: CareerInfo }) {
+  const revealRef = useScrollReveal<HTMLDivElement>();
+  const up = c.projectedGrowthPct >= 0;
+  return (
+    <div
+      ref={revealRef}
+      className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col"
+      data-testid={`card-career-${c.socCode}`}
+    >
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <h3 className="font-serif font-bold text-foreground text-base leading-tight">{c.occupation}</h3>
+        <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0 mt-1">{c.socCode}</span>
+      </div>
+      <div className="flex items-baseline gap-1.5 mb-3">
+        <span className="text-2xl font-bold text-foreground">{formatUSD(c.annualMedianWage)}</span>
+        <span className="text-xs text-muted-foreground">median / yr</span>
+      </div>
+      <div className="flex flex-wrap gap-2 mb-3">
+        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg ${up ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-rose-50 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"}`}>
+          <TrendingUp className="w-3 h-3" />{up ? "+" : ""}{c.projectedGrowthPct}%
+        </span>
+        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg bg-muted text-muted-foreground">
+          <Award className="w-3 h-3" />{c.typicalEducation}
+        </span>
+      </div>
+      <div className="text-xs text-muted-foreground mt-auto pt-1">
+        Entry {formatUSD(c.annualEntryWage)} · Experienced {formatUSD(c.annualExperiencedWage)}
+      </div>
+    </div>
+  );
+}
+
 function CareersView() {
   const { data: careers, isLoading, isError, refetch, isFetching } = useGetCareers();
   const [search, setSearch] = useState("");
@@ -2330,6 +2370,13 @@ function CareersView() {
 
   const filtersActive = search.trim() !== "" || minWage > 0 || minGrowth > -100 || degree !== "any";
   const resetFilters = () => { setSearch(""); setMinWage(0); setMinGrowth(-100); setDegree("any"); };
+
+  // Reveal triggers cache their start positions; recompute them whenever the
+  // filtered list changes so persisting cards that shift into view aren't left
+  // stuck hidden (opacity 0).
+  useEffect(() => {
+    ScrollTrigger.refresh();
+  }, [filtered]);
 
   const selectCls = "px-3 py-2 rounded-xl border border-border bg-card text-sm font-medium text-foreground outline-none focus:border-primary transition-colors cursor-pointer";
 
@@ -2412,32 +2459,9 @@ function CareersView() {
         <>
           <p className="text-sm text-muted-foreground mb-4">{filtered.length} {filtered.length === 1 ? "occupation" : "occupations"}{isFetching ? " · refreshing…" : ""}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((c) => {
-              const up = c.projectedGrowthPct >= 0;
-              return (
-                <div key={c.socCode} className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col" data-testid={`card-career-${c.socCode}`}>
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <h3 className="font-serif font-bold text-foreground text-base leading-tight">{c.occupation}</h3>
-                    <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0 mt-1">{c.socCode}</span>
-                  </div>
-                  <div className="flex items-baseline gap-1.5 mb-3">
-                    <span className="text-2xl font-bold text-foreground">{formatUSD(c.annualMedianWage)}</span>
-                    <span className="text-xs text-muted-foreground">median / yr</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg ${up ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-rose-50 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"}`}>
-                      <TrendingUp className="w-3 h-3" />{up ? "+" : ""}{c.projectedGrowthPct}%
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg bg-muted text-muted-foreground">
-                      <Award className="w-3 h-3" />{c.typicalEducation}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-auto pt-1">
-                    Entry {formatUSD(c.annualEntryWage)} · Experienced {formatUSD(c.annualExperiencedWage)}
-                  </div>
-                </div>
-              );
-            })}
+            {filtered.map((c) => (
+              <CareerCard key={c.socCode} c={c} />
+            ))}
           </div>
           <p className="text-xs text-muted-foreground mt-6">
             Source: U.S. Bureau of Labor Statistics — OEWS wages &amp; Employment Projections. Figures are national medians.

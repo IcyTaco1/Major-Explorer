@@ -75,7 +75,7 @@ const clerkAppearance = {
     footerAction: "border-t border-border",
     dividerLine: "bg-border",
     alert: "bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50",
-    otpCodeFieldInput: "border-border",
+    otpCodeFieldInput: "bg-background border-border text-foreground focus:border-ring focus:ring-ring",
     formFieldRow: "",
     main: "",
   },

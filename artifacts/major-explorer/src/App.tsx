@@ -7,6 +7,7 @@ import { shadcn } from "@clerk/themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import BorderGlow from "@/components/BorderGlow";
 import { useLookupMajor, useGetMajorCurriculum, useChat, useGetCareers } from "@workspace/api-client-react";
 import type { College, CurriculumResponse, ChatMessage, CareerInfo } from "@workspace/api-client-react";
 import {
@@ -750,20 +751,21 @@ function QuizResults({ majors, onExplore, onDismiss }: { majors: MajorSuggestion
         <p className="text-muted-foreground mb-8">Based on your interests, here are the majors we think you'll love — and why. Click one to explore it.</p>
         <div className="space-y-3 mb-8">
           {majors.map((item, i) => (
-            <button
-              key={item.major}
-              onClick={() => onExplore(item.major)}
-              className="w-full flex items-start gap-4 bg-card border border-border rounded-2xl p-5 text-left hover:border-muted-foreground hover:shadow-md transition-all group"
-            >
-              <span className="w-10 h-10 rounded-xl bg-primary text-primary-foreground font-serif font-bold text-lg flex items-center justify-center flex-shrink-0">
-                {i + 1}
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="block font-serif font-bold text-foreground text-lg">{item.major}</span>
-                {item.reason && <span className="block text-sm text-muted-foreground mt-1 leading-relaxed">{item.reason}</span>}
-              </span>
-              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
-            </button>
+            <BorderGlow key={item.major} className="group">
+              <button
+                onClick={() => onExplore(item.major)}
+                className="w-full flex items-start gap-4 p-5 text-left rounded-2xl"
+              >
+                <span className="w-10 h-10 rounded-xl bg-primary text-primary-foreground font-serif font-bold text-lg flex items-center justify-center flex-shrink-0">
+                  {i + 1}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-serif font-bold text-foreground text-lg">{item.major}</span>
+                  {item.reason && <span className="block text-sm text-muted-foreground mt-1 leading-relaxed">{item.reason}</span>}
+                </span>
+                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
+              </button>
+            </BorderGlow>
           ))}
         </div>
         <button onClick={onDismiss} className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
@@ -897,7 +899,8 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
           const mode = getSortMode(item.majorName);
           const colleges = sortedColleges(item.colleges, mode);
           return (
-            <div key={item.majorName} className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+            <BorderGlow key={item.majorName}>
+              <div className="bg-card rounded-2xl overflow-hidden">
               <div className="flex items-center gap-3 p-5 md:p-6">
                 <button onClick={() => toggleExpand(item.majorName)} className="flex-1 flex items-center gap-3 text-left min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
@@ -952,7 +955,8 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
                   )}
                 </div>
               )}
-            </div>
+              </div>
+            </BorderGlow>
           );
         })}
       </div>
@@ -1002,7 +1006,8 @@ function MyCollegesView({ myColleges, onRemove, userGpa }: {
           const mode = getSortMode(majorName);
           const sorted = mode === "alpha" ? [...colleges].sort((a, b) => a.name.localeCompare(b.name)) : [...colleges].sort((a, b) => a.rank - b.rank);
           return (
-            <div key={majorName} className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+            <BorderGlow key={majorName}>
+              <div className="bg-card rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-5 md:px-6 py-4 bg-background border-b border-border">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
@@ -1038,7 +1043,8 @@ function MyCollegesView({ myColleges, onRemove, userGpa }: {
                   </li>
                 ))}
               </ul>
-            </div>
+              </div>
+            </BorderGlow>
           );
         })}
       </div>
@@ -1619,9 +1625,9 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                 const isOpen = openDropdown === dropKey;
 
                 return (
-                  <div
+                  <BorderGlow
                     key={college.rank}
-                    className={`bg-card rounded-2xl border border-border transition-all duration-200 hover:shadow-md hover:border-muted-foreground group animate-in fade-in slide-in-from-bottom-4 stagger-${index+1} fill-mode-both`}
+                    className={`group animate-in fade-in slide-in-from-bottom-4 stagger-${index+1} fill-mode-both ${isOpen ? "relative z-20" : ""}`}
                     data-testid={`item-college-${college.rank}`}
                   >
                     <div className="flex gap-4 md:gap-6 p-5 md:p-6">
@@ -1676,7 +1682,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                         <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
                       </div>
                     </div>
-                  </div>
+                  </BorderGlow>
                 );
               })}
             </div>
@@ -1896,20 +1902,21 @@ function SuggestedView({ results, onExplore, onRetake }: {
       </div>
       <div className="space-y-3">
         {results.map((item, i) => (
-          <button
-            key={item.major}
-            onClick={() => onExplore(item.major)}
-            className="w-full flex items-start gap-4 bg-card border border-border rounded-2xl p-5 text-left hover:border-muted-foreground hover:shadow-md transition-all group"
-          >
-            <span className="w-10 h-10 rounded-xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center flex-shrink-0 font-sans">
-              {i + 1}
-            </span>
-            <span className="flex-1 min-w-0">
-              <span className="block font-bold text-foreground text-lg">{item.major}</span>
-              {item.reason && <span className="block text-sm text-muted-foreground mt-1 leading-relaxed">{item.reason}</span>}
-            </span>
-            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
-          </button>
+          <BorderGlow key={item.major} className="group">
+            <button
+              onClick={() => onExplore(item.major)}
+              className="w-full flex items-start gap-4 p-5 text-left rounded-2xl"
+            >
+              <span className="w-10 h-10 rounded-xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center flex-shrink-0 font-sans">
+                {i + 1}
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-bold text-foreground text-lg">{item.major}</span>
+                {item.reason && <span className="block text-sm text-muted-foreground mt-1 leading-relaxed">{item.reason}</span>}
+              </span>
+              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
+            </button>
+          </BorderGlow>
         ))}
       </div>
     </div>

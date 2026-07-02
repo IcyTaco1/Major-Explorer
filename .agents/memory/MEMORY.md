@@ -1,7 +1,1 @@
-# Memory Index
-
-- [Orval codegen gotchas](orval-codegen-gotchas.md) — api-zod barrel TS2308 collisions when a component name equals `<OperationId>Response`/`Body`; rename to entity nouns; ignore pre-existing integrations-openai errors.
-- [Clerk e2e testing](clerk-e2e-testing.md) — Clerk-gated apps flake/globally-block the Playwright harness via OAuth fallback; verify with curl+typecheck+architect, don't retry after a block.
-- [AI wage contract](ai-wage-contract.md) — major-explorer: AI must NEVER emit wages; server scrubWages() + BLS-only data + GPA localStorage-only; don't remove scrub/cap/SOC-whitelist.
-- [Babel metadata JSX generics](babel-metadata-jsx-generics.md) — `<Comp<T> .../>` passes tsc but Vite parse-errors (metadata plugin injects attrs before type arg); make component non-generic + cast instead.
-- [gpt-5.2 reasoning_effort + latency](gpt52-reasoning-effort.md) — values none/low/medium/high/xhigh (minimal→400); big-list latency is output-bound, reasoning_effort won't cut it.
+- [Wrapping cards in a stacking-context component](stacking-context-card-wrap.md) — absolute dropdowns inside a card break when the card is wrapped in a component using isolation/transform; raise the whole card's z-index while the overlay is open.

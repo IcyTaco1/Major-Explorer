@@ -20,7 +20,7 @@ import {
   ChevronRight, ChevronDown, ChevronUp, Bookmark, BookmarkCheck,
   Trash2, SortAsc, MessageCircle, Send, Bot, Check, DollarSign,
   LogOut, User, ChevronLeft, Sparkles, TrendingUp, Award, ExternalLink, Briefcase,
-  Settings, SlidersHorizontal, RotateCcw, Sun, Moon, Monitor, Palette, ShieldCheck, UserCog, BarChart3, type LucideIcon
+  Settings, SlidersHorizontal, RotateCcw, Sun, Moon, Monitor, Palette, ShieldCheck, UserCog, BarChart3, Home, type LucideIcon
 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import SiteBackground from "@/components/SiteBackground";
@@ -2622,6 +2622,14 @@ function AppShell() {
             items={navItems}
           />
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => { setExploreInitialMajor(undefined); setView("explore"); }}
+              className="w-9 h-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-colors"
+              title="Home"
+              data-testid="button-home"
+            >
+              <Home className="w-4 h-4" />
+            </button>
             <button
               onClick={toggleTheme}
               className="w-9 h-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-colors"

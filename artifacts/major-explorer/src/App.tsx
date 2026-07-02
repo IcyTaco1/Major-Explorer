@@ -23,6 +23,7 @@ import {
   Settings, SlidersHorizontal, RotateCcw, Sun, Moon, Monitor, Palette, ShieldCheck, UserCog, BarChart3, type LucideIcon
 } from "lucide-react";
 import NotFound from "@/pages/not-found";
+import SiteBackground from "@/components/SiteBackground";
 
 // ─── Clerk setup ──────────────────────────────────────────────────────
 const clerkPubKey = publishableKeyFromHost(
@@ -684,7 +685,7 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-8">
@@ -750,7 +751,7 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
 // ─── Quiz Results splash ──────────────────────────────────────────────
 function QuizResults({ majors, onExplore, onDismiss }: { majors: MajorSuggestion[]; onExplore: (major: string) => void; onDismiss: () => void }) {
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg text-center">
         <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Your top matches!</h1>
         <p className="text-muted-foreground mb-8">Based on your interests, here are the majors we think you'll love — and why. Click one to explore it.</p>
@@ -2098,7 +2099,7 @@ function OnboardingProfile({ initial, onComplete, onSkip }: {
 }) {
   const state = useGpaGoals(initial);
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 bg-primary text-primary-foreground text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
@@ -2609,7 +2610,7 @@ function AppShell() {
   ];
 
   return (
-    <div className="min-h-screen w-full bg-background flex flex-col">
+    <div className="min-h-screen w-full flex flex-col">
       <header className="w-full px-4 sm:px-6 lg:px-12 py-3 lg:py-4 border-b border-border bg-card shadow-sm sticky top-0 z-40">
         <div className="flex items-center justify-between gap-2">
           <PillNav
@@ -2688,7 +2689,7 @@ function AppShell() {
 function LandingPage() {
   const [, setLocation] = useLocation();
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <header className="w-full py-4 px-6 lg:px-12 flex items-center justify-between border-b border-border bg-card shadow-sm">
         <div className="flex items-center gap-2">
           <Milestone className="w-5 h-5 text-foreground" />
@@ -2744,7 +2745,7 @@ function LandingPage() {
 // ─── Sign-in / Sign-up pages ──────────────────────────────────────────
 function SignInPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
     </div>
   );
@@ -2752,7 +2753,7 @@ function SignInPage() {
 
 function SignUpPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
     </div>
   );
@@ -2842,9 +2843,12 @@ function ClerkProviderWithRoutes() {
 
 function App() {
   return (
-    <WouterRouter base={basePath}>
-      <ClerkProviderWithRoutes />
-    </WouterRouter>
+    <>
+      <SiteBackground />
+      <WouterRouter base={basePath}>
+        <ClerkProviderWithRoutes />
+      </WouterRouter>
+    </>
   );
 }
 

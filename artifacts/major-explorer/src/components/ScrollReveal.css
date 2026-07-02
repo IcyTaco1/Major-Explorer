@@ -1,0 +1,15 @@
+.scroll-reveal {
+  margin: 0;
+}
+
+/* Font size, weight, line-height, and color are driven by the app via textClassName
+   (e.g. Tailwind `text-lg leading-relaxed text-foreground`) so the effect adapts to
+   the surrounding theme instead of imposing the library's default heading styles. */
+.scroll-reveal-text {
+  margin: 0;
+}
+
+.word {
+  display: inline-block;
+  will-change: opacity, filter;
+}

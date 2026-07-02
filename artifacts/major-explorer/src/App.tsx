@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import BorderGlow from "@/components/BorderGlow";
+import ScrollReveal from "@/components/ScrollReveal";
 import { useLookupMajor, useGetMajorCurriculum, useChat, useGetCareers } from "@workspace/api-client-react";
 import type { College, CurriculumResponse, ChatMessage, CareerInfo } from "@workspace/api-client-react";
 import {
@@ -1569,7 +1570,17 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                   {isMajorSaved(result.major) ? <><BookmarkCheck className="w-4 h-4" /> Saved</> : <><Bookmark className="w-4 h-4" /> Save Major</>}
                 </button>
               </div>
-              <p className="text-lg leading-relaxed text-foreground relative z-10 mb-8" data-testid="text-major-description">{result.description}</p>
+              <ScrollReveal
+                key={result.major}
+                containerClassName="relative z-10 mb-8"
+                textClassName="text-lg leading-relaxed text-foreground"
+                baseRotation={2}
+                baseOpacity={0.3}
+                blurStrength={3}
+                data-testid="text-major-description"
+              >
+                {result.description}
+              </ScrollReveal>
               <CareerStats career={result.career} />
             </div>
 

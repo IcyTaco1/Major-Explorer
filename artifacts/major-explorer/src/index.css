@@ -225,7 +225,7 @@
   position: absolute;
   inset: 0;
   /* Light mode: soft pastel beams stay a subtle texture; page stays light. */
-  background: hsl(var(--background) / 0.5);
+  background: hsl(var(--background) / 0.62);
 }
 .dark .site-bg-scrim {
   /* Dark mode: let the beams come through prominently. */

@@ -64,7 +64,7 @@ class WebGLBoundary extends Component<
   }
 }
 
-const LIGHT = { background: "#edecf7", light: "#7c3aed", base: "#4f46e5" };
+const LIGHT = { background: "#eef0fb", light: "#c4b5fd", base: "#a5b4fc" };
 const DARK = { background: "#0b1120", light: "#9aa7ff", base: "#000000" };
 
 /**

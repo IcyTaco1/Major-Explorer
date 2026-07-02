@@ -43,6 +43,14 @@ in light mode — and drive it as a reactive uniform: `beamMaterial.uniforms
 .diffuse.value.set(baseColor)` in a `useEffect`, so theme toggles never rebuild
 the material (keep it out of the material's useMemo deps).
 
+**Both** the base (`diffuse`) AND the lit `lightColor` must be soft pastels in
+light mode. Fully-saturated brand hex (e.g. base `#4f46e5` + light `#7c3aed`)
+render as a heavy purple wall with harsh white streaks — users call it "bad."
+Use pastel indigo/violet (base `#a5b4fc`, light `#c4b5fd`) and lift the light
+scrim to ~0.6 so beams read as a gentle texture, not a saturated slab. Shared
+Beams props (beamNumber/speed/noiseIntensity) affect BOTH themes — to change only
+light mode, tune the light palette + `.site-bg-scrim` opacity, never those props.
+
 ## Theme-aware colors without Canvas remount
 Observe the `dark` class on `document.documentElement` via `MutationObserver`
 (`attributeFilter:["class"]`) — that's how the theme system toggles it. Pass the

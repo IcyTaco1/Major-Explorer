@@ -14,3 +14,5 @@ Anything that establishes a stacking context does this: `isolation: isolate`, an
 **Why:** z-index only competes within the same stacking context. Confining the overlay inside the card means the whole card (not the overlay) is what competes with sibling cards.
 
 **How to apply:** When the overlay is open, raise the *whole card* above its siblings — e.g. add `relative z-20` (conditionally, only while open) to the wrapping element. Do NOT remove `isolation`/`transform` from the glow CSS; those are required for the `z-index:-1` pseudo-element glow layers and the `plus-lighter`/`soft-light` blend modes to render.
+
+**Also applies to `perspective`/tilt wrappers:** a mouse-tilt wrapper (e.g. TiltedCard) sets `perspective` on the outer element, which is itself a stacking-context trigger — so wrapping cards in it has the exact same failure mode. Fix identically: pass the conditional `relative z-20` elevation to the tilt wrapper while the overlay is open, and also disable the tilt (settle to flat) so a mid-hover transform can't fight the elevation. The dropdown's containing block is the inner `relative` div, so it is unaffected by the wrapper's transform.

@@ -1,0 +1,18 @@
+/* TiltedCard (React Bits, adapted) — a generic flat mouse-tilt wrapper.
+   Both layers fill their cell so grid/flex equal-height layouts (e.g. the
+   careers grid) keep stretching, while vertical (space-y) stacks fall back to
+   auto height. NO preserve-3d/translateZ: a flat transform keeps the cards'
+   backdrop-filter blur intact. */
+
+.tilted-card {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tilted-card-inner {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: flat;
+}

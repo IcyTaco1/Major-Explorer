@@ -12,6 +12,8 @@ import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ScrollReveal from "@/components/ScrollReveal";
 import GradualBlur from "@/components/GradualBlur";
+import PillNav, { type PillNavItem } from "@/components/PillNav";
+import TiltedCard from "@/components/TiltedCard";
 import { useLookupMajor, useGetMajorCurriculum, useChat, useGetCareers } from "@workspace/api-client-react";
 import type { College, CurriculumResponse, ChatMessage, CareerInfo } from "@workspace/api-client-react";
 import {
@@ -755,7 +757,8 @@ function QuizResults({ majors, onExplore, onDismiss }: { majors: MajorSuggestion
         <p className="text-muted-foreground mb-8">Based on your interests, here are the majors we think you'll love — and why. Click one to explore it.</p>
         <div className="space-y-3 mb-8">
           {majors.map((item, i) => (
-            <RevealBorderGlow key={item.major} className="group">
+            <TiltedCard key={item.major}>
+              <RevealBorderGlow className="group">
               <button
                 onClick={() => onExplore(item.major)}
                 className="w-full flex items-start gap-4 p-5 text-left rounded-2xl"
@@ -770,7 +773,8 @@ function QuizResults({ majors, onExplore, onDismiss }: { majors: MajorSuggestion
                 <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
               </button>
               <CardBlur />
-            </RevealBorderGlow>
+              </RevealBorderGlow>
+            </TiltedCard>
           ))}
         </div>
         <button onClick={onDismiss} className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
@@ -904,7 +908,8 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
           const mode = getSortMode(item.majorName);
           const colleges = sortedColleges(item.colleges, mode);
           return (
-            <RevealBorderGlow key={item.majorName}>
+            <TiltedCard key={item.majorName}>
+              <RevealBorderGlow>
               <div className="bg-card rounded-2xl overflow-hidden">
               <div className="flex items-center gap-3 p-5 md:p-6">
                 <button onClick={() => toggleExpand(item.majorName)} className="flex-1 flex items-center gap-3 text-left min-w-0">
@@ -962,7 +967,8 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
               )}
               </div>
               <CardBlur />
-            </RevealBorderGlow>
+              </RevealBorderGlow>
+            </TiltedCard>
           );
         })}
       </div>
@@ -1012,7 +1018,8 @@ function MyCollegesView({ myColleges, onRemove, userGpa }: {
           const mode = getSortMode(majorName);
           const sorted = mode === "alpha" ? [...colleges].sort((a, b) => a.name.localeCompare(b.name)) : [...colleges].sort((a, b) => a.rank - b.rank);
           return (
-            <RevealBorderGlow key={majorName}>
+            <TiltedCard key={majorName}>
+              <RevealBorderGlow>
               <div className="bg-card rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-5 md:px-6 py-4 bg-background border-b border-border">
                 <div className="flex items-center gap-3">
@@ -1051,7 +1058,8 @@ function MyCollegesView({ myColleges, onRemove, userGpa }: {
               </ul>
               </div>
               <CardBlur />
-            </RevealBorderGlow>
+              </RevealBorderGlow>
+            </TiltedCard>
           );
         })}
       </div>
@@ -1646,11 +1654,13 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                 const isOpen = openDropdown === dropKey;
 
                 return (
-                  <RevealBorderGlow
+                  <TiltedCard
                     key={college.rank}
-                    className={`group ${isOpen ? "relative z-20" : ""}`}
                     data-testid={`item-college-${college.rank}`}
+                    containerClassName={isOpen ? "relative z-20" : ""}
+                    disabled={isOpen}
                   >
+                    <RevealBorderGlow className="group">
                     <div className="flex gap-4 md:gap-6 p-5 md:p-6">
                       <div className="flex-shrink-0">
                         <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-background text-foreground font-serif font-bold text-xl md:text-2xl flex items-center justify-center border border-border shadow-sm">
@@ -1704,7 +1714,8 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                       </div>
                     </div>
                     <CardBlur />
-                  </RevealBorderGlow>
+                    </RevealBorderGlow>
+                  </TiltedCard>
                 );
               })}
             </div>
@@ -1924,7 +1935,8 @@ function SuggestedView({ results, onExplore, onRetake }: {
       </div>
       <div className="space-y-3">
         {results.map((item, i) => (
-          <RevealBorderGlow key={item.major} className="group">
+          <TiltedCard key={item.major}>
+            <RevealBorderGlow className="group">
             <button
               onClick={() => onExplore(item.major)}
               className="w-full flex items-start gap-4 p-5 text-left rounded-2xl"
@@ -1939,7 +1951,8 @@ function SuggestedView({ results, onExplore, onRetake }: {
               <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-2.5" />
             </button>
             <CardBlur />
-          </RevealBorderGlow>
+            </RevealBorderGlow>
+          </TiltedCard>
         ))}
       </div>
     </div>
@@ -2346,9 +2359,10 @@ function CareerCard({ c }: { c: CareerInfo }) {
   const revealRef = useScrollReveal<HTMLDivElement>();
   const up = c.projectedGrowthPct >= 0;
   return (
+    <TiltedCard>
     <div
       ref={revealRef}
-      className="relative bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col"
+      className="relative bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full"
       data-testid={`card-career-${c.socCode}`}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -2372,6 +2386,7 @@ function CareerCard({ c }: { c: CareerInfo }) {
       </div>
       <CardBlur />
     </div>
+    </TiltedCard>
   );
 }
 
@@ -2614,36 +2629,27 @@ function AppShell() {
     );
   }
 
-  const navBtn = (target: AppView, label: string, count?: number) => (
-    <button
-      onClick={() => setView(target)}
-      className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${view === target ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
-    >
-      {label}
-      {count !== undefined && count > 0 && (
-        <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center ${view === target ? "bg-card text-foreground" : "bg-primary text-primary-foreground"}`}>
-          {count}
-        </span>
-      )}
-    </button>
-  );
+  const navItems: PillNavItem<AppView>[] = [
+    { id: "explore", label: "Explore" },
+    { id: "suggested", label: "Suggested" },
+    { id: "careers", label: "Careers" },
+    { id: "colleges", label: "My Colleges", count: savedCollegeCount },
+    { id: "saved", label: "Saved", count: savedMajorCount },
+  ];
 
   return (
     <div className="min-h-screen w-full bg-background flex flex-col">
       <header className="w-full px-4 sm:px-6 lg:px-12 py-3 lg:py-4 border-b border-border bg-card shadow-sm sticky top-0 z-40">
         <div className="flex items-center justify-between gap-2">
-          <button onClick={() => setView("explore")} className="flex items-center gap-2 text-foreground hover:opacity-75 transition-opacity shrink-0">
-            <Milestone className="w-5 h-5 text-foreground" />
-            <span className="font-serif font-semibold text-lg tracking-tight">Next Steps</span>
-          </button>
+          <PillNav
+            logoSrc={`${basePath}/logo.svg`}
+            logoAlt="Next Steps"
+            activeId={view}
+            onSelect={(id) => setView(id)}
+            onLogoClick={() => setView("explore")}
+            items={navItems}
+          />
           <div className="flex items-center gap-2 sm:gap-3">
-            <nav className="hidden lg:flex items-center gap-1">
-              {navBtn("explore", "Explore")}
-              {navBtn("suggested", "Suggested")}
-              {navBtn("careers", "Careers")}
-              {navBtn("colleges", "My Colleges", savedCollegeCount)}
-              {navBtn("saved", "Saved", savedMajorCount)}
-            </nav>
             <button
               onClick={toggleTheme}
               className="w-9 h-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-colors"
@@ -2666,13 +2672,6 @@ function AppShell() {
             </Show>
           </div>
         </div>
-        <nav className="lg:hidden flex items-center gap-1 mt-2 -mx-4 px-4 overflow-x-auto no-scrollbar">
-          {navBtn("explore", "Explore")}
-          {navBtn("suggested", "Suggested")}
-          {navBtn("careers", "Careers")}
-          {navBtn("colleges", "My Colleges", savedCollegeCount)}
-          {navBtn("saved", "Saved", savedMajorCount)}
-        </nav>
       </header>
 
       {view === "explore" && (

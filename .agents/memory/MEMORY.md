@@ -1,2 +1,2 @@
 - [Wrapping cards in a stacking-context component](stacking-context-card-wrap.md) — absolute dropdowns inside a card break when the card is wrapped in a component using isolation/transform; raise the whole card's z-index while the overlay is open.
-- [GSAP scrub scroll-reveal integration](gsap-scrollreveal-integration.md) — scrub reveals leave above-the-fold prose faded/blurred at rest (soften baseOpacity/blur); clean up with gsap.context().revert() not ScrollTrigger.getAll().kill(); render div not h2.
+- [GSAP scroll-reveal integration](gsap-scrollreveal-integration.md) — scrub reveals look "broken" when text is already in view; use a timed timeline + toggleActions to replay on every scroll-in; clean up with gsap.context().revert().

@@ -1575,8 +1575,6 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                 containerClassName="relative z-10 mb-8"
                 textClassName="text-lg leading-relaxed text-foreground"
                 baseRotation={2}
-                baseOpacity={0.3}
-                blurStrength={3}
                 data-testid="text-major-description"
               >
                 {result.description}

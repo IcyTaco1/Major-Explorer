@@ -11,5 +11,5 @@
 
 .word {
   display: inline-block;
-  will-change: opacity, filter;
+  will-change: transform, opacity, filter;
 }

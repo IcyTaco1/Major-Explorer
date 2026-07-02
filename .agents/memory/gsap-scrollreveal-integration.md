@@ -7,10 +7,11 @@ description: Non-obvious readability, cleanup, and semantics gotchas when portin
 
 Applies to React Bits "ScrollReveal" and any GSAP `scrollTrigger: { scrub: true }` word/opacity/blur reveal.
 
-## Above-the-fold readability (the main UX trap)
-With `scrub: true`, the reveal state is pinned to scroll position, not time. If the target text can be **above the fold** when it first renders (e.g. a primary description with no auto-scroll after it appears), it can sit permanently faded/blurred at rest until the user scrolls.
-**Why it matters:** blurred body text is worse to read than merely dimmed text.
-**How to apply:** for must-read prose, soften the at-rest floor — raise `baseOpacity` (~0.3) and keep `blurStrength` low (~2–3) or `enableBlur={false}`. Reserve the dramatic 0.1-opacity / high-blur defaults for decorative headings the user scrolls down to. On very tall viewports the whole trigger band is already past at scroll=0, so the effect simply no-ops (fully visible) — acceptable.
+## Prefer a timed toggleActions entrance over scrub (the main trap)
+`scrub: true` pins the reveal to scroll POSITION, not time. If the text is **already in view** when it first renders (e.g. a description that appears after an async lookup, or anything above the fold), the scrub range is already complete → the user sees NO animation and reports "it's not working." Softening baseOpacity/blur does not fix this; it only makes the dead state less ugly.
+**Fix that actually works:** drop scrub. Use a `gsap.timeline({ scrollTrigger: { trigger, start: "top 80%", toggleActions: "restart none restart none" } })`. `toggleActions` restart-on-enter/enter-back **replays the reveal every time the element scrolls into view from either direction, and plays it on initial load when the element is already within the start zone.** This is what "make it fire on every scroll" means.
+**Nicer fade:** animate `opacity baseOpacity→1` + `yPercent 40→0` (per-word rise) + `blur(N)→0`, `ease: "power3.out"`, and `stagger: { amount: 0.9, from: "start" }` so long and short strings finish in a similar time. With a timed entrance the text always ends fully opaque and stays, so at-rest readability is a non-issue and you can use a dramatic `baseOpacity: 0`.
+**fromTo immediateRender:** in a timeline `fromTo` sets the "from" state immediately, so there's no flash of visible-then-hidden before the trigger fires.
 
 ## Cleanup: revert tweens, not just triggers
 The shipped source cleans up with `ScrollTrigger.getAll().forEach(kill)` — that nukes **every** ScrollTrigger app-wide, so any remount (e.g. `key={...}` on new data) breaks sibling instances. Also, killing a trigger does NOT kill its scrubbed tween, so tweens orphan on the global timeline each remount.

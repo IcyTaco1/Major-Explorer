@@ -64,14 +64,14 @@ class WebGLBoundary extends Component<
   }
 }
 
-const LIGHT = { background: "#f4f6fc", light: "#e6ebff", base: "#b4c0ff" };
+const LIGHT = { background: "#f4f6fc", light: "#7c3aed", base: "#4f46e5" };
 const DARK = { background: "#0b1120", light: "#9aa7ff", base: "#000000" };
 
 /**
  * Fixed, full-viewport animated Beams background rendered behind the entire
- * app. Light mode uses soft periwinkle beams on a near-white backdrop; dark
- * mode uses black beams lit by indigo on a deep-navy backdrop. A theme-aware
- * scrim keeps content readable.
+ * app. Light mode uses indigo beams lit by violet on a near-white backdrop;
+ * dark mode uses black beams lit by indigo on a deep-navy backdrop. A
+ * theme-aware scrim keeps content readable.
  */
 export default function SiteBackground() {
   const isDark = useIsDark();

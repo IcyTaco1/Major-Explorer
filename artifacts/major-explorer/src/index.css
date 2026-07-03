@@ -231,3 +231,40 @@
   /* Dark mode: let the beams come through prominently. */
   background: hsl(var(--background) / 0.42);
 }
+
+/* ─── Liquid-glass surfaces ─────────────────────────────────────────── */
+/* Translucent + backdrop-blur treatment applied to cards, the search bar,
+   the header, pills and controls so the animated beams read softly through
+   every surface. Placed in @layer components so Tailwind utilities (e.g.
+   hover:bg-muted, shadow-*) still override where an element needs them. */
+@layer components {
+  .glass-panel {
+    background-color: hsl(var(--card) / 0.6);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
+    backdrop-filter: blur(14px) saturate(1.5);
+  }
+  .dark .glass-panel {
+    background-color: hsl(var(--card) / 0.5);
+  }
+
+  /* Popovers / dropdowns / modals: more opaque + stronger blur so text stays
+     readable over the moving background. */
+  .glass-popover {
+    background-color: hsl(var(--card) / 0.9);
+    -webkit-backdrop-filter: blur(18px) saturate(1.6);
+    backdrop-filter: blur(18px) saturate(1.6);
+  }
+  .dark .glass-popover {
+    background-color: hsl(var(--card) / 0.82);
+  }
+
+  /* Browsers without backdrop-filter fall back to the opaque card colour. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass-panel,
+    .dark .glass-panel,
+    .glass-popover,
+    .dark .glass-popover {
+      background-color: hsl(var(--card));
+    }
+  }
+}

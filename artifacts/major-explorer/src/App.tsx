@@ -13,6 +13,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ScrollReveal from "@/components/ScrollReveal";
 import PillNav, { type PillNavItem } from "@/components/PillNav";
 import TiltedCard from "@/components/TiltedCard";
+import GlassSurface from "@/components/GlassSurface";
 import { useLookupMajor, useGetMajorCurriculum, useChat, useGetCareers } from "@workspace/api-client-react";
 import type { College, CurriculumResponse, ChatMessage, CareerInfo } from "@workspace/api-client-react";
 import {
@@ -706,7 +707,7 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
         </div>
 
         {/* Question card */}
-        <div className="bg-card rounded-3xl border border-border shadow-sm p-8 animate-in fade-in slide-in-from-bottom-4 duration-400">
+        <div className="glass-panel rounded-3xl border border-border shadow-sm p-8 animate-in fade-in slide-in-from-bottom-4 duration-400">
           <h2 className="text-xl font-bold text-foreground text-center mb-6">{question.question}</h2>
           <div className="space-y-3">
             {question.options.map((opt) => (
@@ -716,7 +717,7 @@ function InterestQuiz({ onComplete }: { onComplete: (majors: MajorSuggestion[]) 
                 className={`w-full text-left px-5 py-3.5 rounded-xl border text-sm font-medium transition-all ${
                   selected === opt.value
                     ? "bg-primary border-primary text-primary-foreground"
-                    : "bg-card border-border text-foreground hover:border-muted-foreground hover:bg-muted"
+                    : "glass-panel border-border text-foreground hover:border-muted-foreground hover:bg-muted"
                 }`}
               >
                 {opt.label}
@@ -800,7 +801,7 @@ function CurriculumModal({ college, major, profile, onClose }: { college: Colleg
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 w-full md:max-w-2xl max-h-[90vh] bg-card md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-400" onClick={(e) => e.stopPropagation()}>
+      <div className="relative z-10 w-full md:max-w-2xl max-h-[90vh] glass-popover md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-400" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between p-6 md:p-8 border-b border-border flex-shrink-0">
           <div className="flex-1 min-w-0 pr-4">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{major}</span>
@@ -909,7 +910,7 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
           return (
             <TiltedCard key={item.majorName}>
               <RevealBorderGlow>
-              <div className="bg-card rounded-2xl overflow-hidden">
+              <div className="glass-panel rounded-2xl overflow-hidden">
               <div className="flex items-center gap-3 p-5 md:p-6">
                 <button onClick={() => toggleExpand(item.majorName)} className="flex-1 flex items-center gap-3 text-left min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
@@ -1018,7 +1019,7 @@ function MyCollegesView({ myColleges, onRemove, userGpa }: {
           return (
             <TiltedCard key={majorName}>
               <RevealBorderGlow>
-              <div className="bg-card rounded-2xl overflow-hidden">
+              <div className="glass-panel rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-5 md:px-6 py-4 bg-background border-b border-border">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
@@ -1126,7 +1127,7 @@ function FilterChips({ label, value, options, onChange }: {
         <button
           key={o.value}
           onClick={() => onChange(o.value)}
-          className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${value === o.value ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground"}`}
+          className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${value === o.value ? "bg-primary border-primary text-primary-foreground" : "glass-panel border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground"}`}
           data-testid={`filter-${label.toLowerCase()}-${o.value}`}
         >
           {o.label}
@@ -1485,7 +1486,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
           </div>
           <input
             type="text"
-            className="block w-full pl-12 pr-32 py-4 md:py-5 border border-border rounded-full text-lg shadow-sm focus:ring-2 focus:ring-ring focus:border-ring transition-all bg-card text-foreground placeholder:text-muted-foreground"
+            className="block w-full pl-12 pr-32 py-4 md:py-5 border border-border rounded-full text-lg shadow-sm focus:ring-2 focus:ring-ring focus:border-ring transition-all glass-panel text-foreground placeholder:text-muted-foreground"
             placeholder="e.g. Finance, Computer Science, Nursing..."
             value={inputValue}
             onChange={(e) => { setInputValue(e.target.value); setShowSuggestions(true); setActiveIdx(-1); }}
@@ -1505,7 +1506,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
             </button>
           </div>
           {suggestions.length > 0 && (
-            <div id="major-suggestions-list" role="listbox" className="absolute z-40 top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-xl overflow-hidden py-2 animate-in fade-in slide-in-from-top-1 duration-150" data-testid="major-suggestions">
+            <div id="major-suggestions-list" role="listbox" className="absolute z-40 top-full left-0 right-0 mt-2 glass-popover border border-border rounded-2xl shadow-xl overflow-hidden py-2 animate-in fade-in slide-in-from-top-1 duration-150" data-testid="major-suggestions">
               {suggestions.map((s, i) => (
                 <button
                   key={s}
@@ -1533,7 +1534,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
             <p className="text-xs text-muted-foreground mb-4">Top fields by U.S. bachelor's degrees awarded · NCES 2021–22</p>
             <div className="flex flex-wrap justify-center gap-3">
               {POPULAR_MAJORS.map((major) => (
-                <button key={major} onClick={() => setSuggestedMajor(major)} className="px-5 py-2.5 bg-card border border-border rounded-full text-foreground hover:border-muted-foreground hover:shadow-sm transition-all">{major}</button>
+                <button key={major} onClick={() => setSuggestedMajor(major)} className="px-5 py-2.5 glass-panel border border-border rounded-full text-foreground hover:border-muted-foreground hover:shadow-sm transition-all">{major}</button>
               ))}
             </div>
           </div>
@@ -1545,14 +1546,14 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
               <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
               Researching the top 50 colleges — this can take a minute or two. Hang tight.
             </div>
-            <div className="bg-card rounded-2xl shadow-sm border border-border p-8 md:p-12 mb-8 animate-pulse">
+            <div className="glass-panel rounded-2xl shadow-sm border border-border p-8 md:p-12 mb-8 animate-pulse">
               <div className="h-10 bg-muted rounded w-1/3 mb-6" />
               <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-4 bg-muted rounded" style={{ width: `${85+(i*3)}%` }} />)}</div>
             </div>
             <div className="space-y-4">
               <div className="h-8 bg-muted rounded w-48 mb-2 animate-pulse" />
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-card rounded-xl shadow-sm border border-border p-6 flex gap-6 animate-pulse">
+                <div key={i} className="glass-panel rounded-xl shadow-sm border border-border p-6 flex gap-6 animate-pulse">
                   <div className="w-12 h-12 bg-muted rounded-lg flex-shrink-0" />
                   <div className="flex-1 space-y-3">
                     <div className="h-5 bg-muted rounded w-1/3" />
@@ -1575,13 +1576,13 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
 
         {!isLoading && !isError && result && (
           <div className="w-full animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <div className="bg-card rounded-3xl shadow-sm border border-border p-8 md:p-12 mb-10 relative overflow-hidden">
+            <div className="glass-panel rounded-3xl shadow-sm border border-border p-8 md:p-12 mb-10 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-background rounded-full blur-3xl -mr-32 -mt-32 opacity-50 pointer-events-none" />
               <div className="flex items-start justify-between gap-4 mb-5 relative z-10">
                 <h2 className="text-3xl md:text-4xl font-serif text-foreground font-bold leading-tight">{result.major}</h2>
                 <button
                   onClick={isMajorSaved(result.major) ? unsaveMajor : saveMajor}
-                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all ${isMajorSaved(result.major) ? "bg-primary border-primary text-primary-foreground hover:bg-primary/90" : "bg-card border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground"}`}
+                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all ${isMajorSaved(result.major) ? "bg-primary border-primary text-primary-foreground hover:bg-primary/90" : "glass-panel border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground"}`}
                   data-testid="button-save-major"
                 >
                   {isMajorSaved(result.major) ? <><BookmarkCheck className="w-4 h-4" /> Saved</> : <><Bookmark className="w-4 h-4" /> Save Major</>}
@@ -1605,7 +1606,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
             </div>
             <p className="text-sm text-muted-foreground mb-4">Click a college to see its 4-year course plan. Use the bookmark to save it to a list.</p>
 
-            <div className="mb-5 bg-card border border-border rounded-2xl p-4 space-y-3">
+            <div className="mb-5 glass-panel border border-border rounded-2xl p-4 space-y-3">
               {userGpa != null ? (
                 <FilterChips
                   label="Fit"
@@ -1638,7 +1639,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
 
             <div ref={dropdownRef} className="space-y-4" data-testid="list-top-colleges">
               {filteredColleges.length === 0 && (
-                <div className="bg-card border border-border rounded-2xl p-8 text-center" data-testid="empty-filtered">
+                <div className="glass-panel border border-border rounded-2xl p-8 text-center" data-testid="empty-filtered">
                   <p className="text-muted-foreground mb-3">No colleges match these filters.</p>
                   <button onClick={resetFilters} className="text-primary font-medium hover:underline" data-testid="button-clear-filters">Clear filters</button>
                 </div>
@@ -1677,14 +1678,14 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                       <div className="flex-shrink-0 flex flex-col items-center gap-2 pl-2 md:pl-4 md:border-l md:border-border relative">
                         <button
                           onClick={(e) => { e.stopPropagation(); setOpenDropdown(isOpen ? null : dropKey); }}
-                          className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${anySaved ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground"}`}
+                          className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${anySaved ? "bg-primary border-primary text-primary-foreground" : "glass-panel border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground"}`}
                           title="Save to a list"
                           data-testid={`button-save-college-${college.rank}`}
                         >
                           {anySaved ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
                         </button>
                         {isOpen && (
-                          <div className="absolute right-0 top-11 z-30 bg-card border border-border rounded-2xl shadow-xl w-48 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                          <div className="absolute right-0 top-11 z-30 glass-popover border border-border rounded-2xl shadow-xl w-48 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                             <p className="px-4 pt-3 pb-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Save to</p>
                             <button
                               className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left"
@@ -1721,7 +1722,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                 <button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 0}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-border bg-card text-sm font-medium text-foreground transition-all hover:border-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-border glass-panel text-sm font-medium text-foreground transition-all hover:border-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
                   data-testid="button-prev-page"
                 >
                   <ChevronLeft className="w-4 h-4" /> Previous
@@ -1730,7 +1731,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === pageCount - 1}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-border bg-card text-sm font-medium text-foreground transition-all hover:border-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-border glass-panel text-sm font-medium text-foreground transition-all hover:border-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
                   data-testid="button-next-page"
                 >
                   Next <ChevronRight className="w-4 h-4" />
@@ -1782,7 +1783,7 @@ function ChatWidget() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 left-4 md:left-6 z-50 w-[calc(100vw-2rem)] max-w-sm flex flex-col bg-card rounded-3xl shadow-2xl border border-border overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-24 left-4 md:left-6 z-50 w-[calc(100vw-2rem)] max-w-sm flex flex-col glass-popover rounded-3xl shadow-2xl border border-border overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-primary">
             <div className="w-8 h-8 rounded-full bg-primary-foreground/10 flex items-center justify-center">
               <Bot className="w-4 h-4 text-primary-foreground" />
@@ -1870,7 +1871,7 @@ function UserMenu() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 p-1.5 sm:pl-3 sm:pr-4 sm:py-2 rounded-full border border-border bg-card hover:bg-muted hover:border-muted-foreground transition-all"
+        className="flex items-center gap-2 p-1.5 sm:pl-3 sm:pr-4 sm:py-2 rounded-full border border-border glass-panel hover:bg-muted hover:border-muted-foreground transition-all"
       >
         <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">
           {initials || <User className="w-3.5 h-3.5" />}
@@ -1879,7 +1880,7 @@ function UserMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-50 bg-card border border-border rounded-2xl shadow-xl w-52 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-12 z-50 glass-popover border border-border rounded-2xl shadow-xl w-52 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           <div className="px-4 py-3 border-b border-border">
             <p className="text-xs text-muted-foreground font-medium">Signed in as</p>
             <p className="text-sm font-semibold text-foreground truncate mt-0.5">{user?.emailAddresses?.[0]?.emailAddress}</p>
@@ -1924,7 +1925,7 @@ function SuggestedView({ results, onExplore, onRetake }: {
         </div>
         <button
           onClick={onRetake}
-          className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border border-border text-sm font-medium text-muted-foreground hover:border-muted-foreground hover:text-foreground hover:bg-card transition-all bg-card"
+          className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border border-border text-sm font-medium text-muted-foreground hover:border-muted-foreground hover:text-foreground transition-all glass-panel"
         >
           <Sparkles className="w-3.5 h-3.5" /> Retake Quiz
         </button>
@@ -2072,7 +2073,7 @@ function GpaGoalsControls({ state }: { state: ReturnType<typeof useGpaGoals> }) 
                 key={g}
                 type="button"
                 onClick={() => setGoals(active ? "" : g)}
-                className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${active ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border text-muted-foreground hover:border-muted-foreground"}`}
+                className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${active ? "bg-primary border-primary text-primary-foreground" : "glass-panel border-border text-muted-foreground hover:border-muted-foreground"}`}
               >
                 {g}
               </button>
@@ -2108,7 +2109,7 @@ function OnboardingProfile({ initial, onComplete, onSkip }: {
           <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-3">Personalize your college fit</h1>
           <p className="text-muted-foreground">Add your GPA and we'll flag every college as a Reach, Match, or Safety. You can change this anytime.</p>
         </div>
-        <div className="bg-card rounded-3xl border border-border shadow-sm p-8">
+        <div className="glass-panel rounded-3xl border border-border shadow-sm p-8">
           <GpaGoalsControls state={state} />
           <button
             onClick={() => onComplete(state.profile)}
@@ -2175,7 +2176,7 @@ function SettingsDialog({ initial, onSaveProfile, theme, onChangeTheme, onRetake
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-3xl w-full h-[600px] max-h-[88vh] p-0 gap-0 flex flex-col overflow-hidden rounded-3xl sm:rounded-3xl bg-card">
+      <DialogContent className="max-w-3xl w-full h-[600px] max-h-[88vh] p-0 gap-0 flex flex-col overflow-hidden rounded-3xl sm:rounded-3xl glass-popover">
         <DialogDescription className="sr-only">Manage your account, appearance, profile, and data settings.</DialogDescription>
         <div className="flex items-center px-6 py-4 border-b border-border shrink-0">
           <DialogTitle className="text-lg font-bold text-foreground">Settings</DialogTitle>
@@ -2335,7 +2336,7 @@ function CareerCard({ c }: { c: CareerInfo }) {
     <TiltedCard>
     <div
       ref={revealRef}
-      className="relative bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full"
+      className="relative glass-panel rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full"
       data-testid={`card-career-${c.socCode}`}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -2394,7 +2395,7 @@ function CareersView() {
     ScrollTrigger.refresh();
   }, [filtered]);
 
-  const selectCls = "px-3 py-2 rounded-xl border border-border bg-card text-sm font-medium text-foreground outline-none focus:border-primary transition-colors cursor-pointer";
+  const selectCls = "px-3 py-2 rounded-xl border border-border glass-panel text-sm font-medium text-foreground outline-none focus:border-primary transition-colors cursor-pointer";
 
   return (
     <main className="w-full max-w-5xl mx-auto px-4 py-10">
@@ -2403,7 +2404,7 @@ function CareersView() {
         <p className="text-muted-foreground mt-1">Explore occupations with real salary and job-growth data from the U.S. Bureau of Labor Statistics.</p>
       </div>
 
-      <div className="bg-card rounded-2xl border border-border shadow-sm p-4 mb-6">
+      <div className="glass-panel rounded-2xl border border-border shadow-sm p-4 mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -2439,7 +2440,7 @@ function CareersView() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-card rounded-2xl border border-border p-5 animate-pulse">
+            <div key={i} className="glass-panel rounded-2xl border border-border p-5 animate-pulse">
               <div className="h-4 bg-muted rounded w-3/4 mb-3" />
               <div className="h-7 bg-muted rounded w-1/2 mb-3" />
               <div className="h-5 bg-muted rounded w-full mb-2" />
@@ -2611,7 +2612,7 @@ function AppShell() {
 
   return (
     <div className="min-h-screen w-full flex flex-col">
-      <header className="w-full px-4 sm:px-6 lg:px-12 py-3 lg:py-4 border-b border-border bg-card shadow-sm sticky top-0 z-40">
+      <header className="w-full px-4 sm:px-6 lg:px-12 py-3 lg:py-4 border-b border-border glass-panel shadow-sm sticky top-0 z-40">
         <div className="flex items-center justify-between gap-2">
           <PillNav
             logoSrc={`${basePath}/logo.svg`}
@@ -2698,7 +2699,7 @@ function LandingPage() {
   const [, setLocation] = useLocation();
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="w-full py-4 px-6 lg:px-12 flex items-center justify-between border-b border-border bg-card shadow-sm">
+      <header className="w-full py-4 px-6 lg:px-12 flex items-center justify-between border-b border-border glass-panel shadow-sm">
         <div className="flex items-center gap-2">
           <Milestone className="w-5 h-5 text-foreground" />
           <span className="font-display font-bold text-lg tracking-tight text-foreground">Next Steps</span>
@@ -2714,10 +2715,12 @@ function LandingPage() {
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-20 text-center">
-        <div className="inline-flex items-center gap-2 bg-muted text-muted-foreground text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
-          <Sparkles className="w-3.5 h-3.5" />
-          AI-powered college major explorer
-        </div>
+        <GlassSurface width={300} height={40} borderRadius={20} className="mb-6">
+          <span className="inline-flex items-center gap-2 text-muted-foreground text-xs font-semibold whitespace-nowrap">
+            <Sparkles className="w-3.5 h-3.5" />
+            AI-powered college major explorer
+          </span>
+        </GlassSurface>
         <h1 className="text-5xl md:text-7xl font-display font-bold text-foreground mb-6 leading-tight max-w-3xl">
           Find the major that's right for you.
         </h1>
@@ -2739,7 +2742,7 @@ function LandingPage() {
             { title: "Top 10 colleges", desc: "Instantly see the top US universities for any major, with highlights on what makes each one great." },
             { title: "4-year course plan", desc: "Click any college to see a realistic 4-year course plan tailored to your major." },
           ].map(({ title, desc }) => (
-            <div key={title} className="bg-card rounded-2xl border border-border p-6 text-left shadow-sm">
+            <div key={title} className="glass-panel rounded-2xl border border-border p-6 text-left shadow-sm">
               <h3 className="font-display font-bold text-foreground text-lg mb-2">{title}</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">{desc}</p>
             </div>

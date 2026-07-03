@@ -7,6 +7,11 @@
   --glow-padding: 36px;
   --cone-spread: 25;
 
+  /* Translucent glass fill so the animated beams read softly through the card.
+     --card-bg drives both this background and the ::before border gradient's
+     padding-box fill, keeping the glass look consistent on hover. */
+  --card-bg: hsl(var(--card) / 0.6);
+
   position: relative;
   border-radius: var(--border-radius);
   isolation: isolate;
@@ -14,9 +19,25 @@
   display: grid;
   border: 1px solid hsl(var(--card-border));
   background: var(--card-bg, hsl(var(--card)));
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
   overflow: visible;
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.25s ease-out;
+}
+
+.dark .border-glow-card {
+  --card-bg: hsl(var(--card) / 0.5);
+  /* faint top highlight keeps dark glass cards delineated over the beams */
+  box-shadow: var(--shadow-sm), inset 0 1px 0 0 hsl(0 0% 100% / 0.05);
+}
+
+/* Browsers without backdrop-filter fall back to the opaque card colour. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .border-glow-card,
+  .dark .border-glow-card {
+    --card-bg: hsl(var(--card));
+  }
 }
 
 .border-glow-card:hover {

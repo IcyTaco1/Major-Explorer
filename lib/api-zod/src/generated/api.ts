@@ -16,7 +16,7 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * Returns a description and top 10 colleges for a given major
+ * Returns a description and a ranked list of top colleges for a given major
  * @summary Look up a college major
  */
 export const LookupMajorBody = zod.object({
@@ -173,3 +173,485 @@ export const ChatBody = zod.object({
 export const ChatResponse = zod.object({
   reply: zod.string(),
 });
+
+/**
+ * Returns the signed-in user's profile, including grade level and admin flag
+ * @summary Get current user profile
+ */
+export const GetMeResponse = zod.object({
+  userId: zod.string(),
+  email: zod.string().nullable(),
+  gradeLevel: zod
+    .number()
+    .nullable()
+    .describe("High school grade level (9-12)"),
+  isAdmin: zod.boolean(),
+});
+
+/**
+ * @summary Update current user profile
+ */
+export const updateMeBodyGradeLevelMin = 9;
+export const updateMeBodyGradeLevelMax = 12;
+
+export const UpdateMeBody = zod.object({
+  gradeLevel: zod
+    .number()
+    .min(updateMeBodyGradeLevelMin)
+    .max(updateMeBodyGradeLevelMax)
+    .nullish()
+    .describe("High school grade level (9-12), or null to clear"),
+});
+
+export const UpdateMeResponse = zod.object({
+  userId: zod.string(),
+  email: zod.string().nullable(),
+  gradeLevel: zod
+    .number()
+    .nullable()
+    .describe("High school grade level (9-12)"),
+  isAdmin: zod.boolean(),
+});
+
+/**
+ * @summary List the current user's saved colleges
+ */
+export const listMyCollegesResponseEarlyDecisionDeadlineRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+export const listMyCollegesResponseRegularDecisionDeadlineRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+export const listMyCollegesResponseFafsaDeadlineRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+
+export const ListMyCollegesResponseItem = zod.object({
+  id: zod.number(),
+  major: zod.string(),
+  collegeName: zod.string(),
+  applicationStatus: zod.enum([
+    "not_applied",
+    "applied",
+    "interviewed",
+    "accepted",
+    "rejected",
+    "waitlisted",
+  ]),
+  notes: zod.string(),
+  earlyDecisionDeadline: zod
+    .string()
+    .regex(listMyCollegesResponseEarlyDecisionDeadlineRegExp)
+    .nullable()
+    .describe("Calendar date as YYYY-MM-DD"),
+  regularDecisionDeadline: zod
+    .string()
+    .regex(listMyCollegesResponseRegularDecisionDeadlineRegExp)
+    .nullable()
+    .describe("Calendar date as YYYY-MM-DD"),
+  fafsaDeadline: zod
+    .string()
+    .regex(listMyCollegesResponseFafsaDeadlineRegExp)
+    .nullable()
+    .describe("Calendar date as YYYY-MM-DD"),
+  college: zod.object({
+    rank: zod.number(),
+    name: zod.string(),
+    location: zod.string(),
+    highlights: zod.string(),
+    admissionsProfile: zod
+      .object({
+        gpaLow: zod
+          .number()
+          .nullish()
+          .describe(
+            "Lower bound of typical admitted GPA (≈25th percentile, 0-4 scale)",
+          ),
+        gpaHigh: zod
+          .number()
+          .nullish()
+          .describe(
+            "Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)",
+          ),
+        satLow: zod
+          .number()
+          .nullish()
+          .describe(
+            "Lower bound of typical admitted SAT total (≈25th percentile, 400-1600)",
+          ),
+        satHigh: zod
+          .number()
+          .nullish()
+          .describe(
+            "Upper bound of typical admitted SAT total (≈75th percentile, 400-1600)",
+          ),
+        actLow: zod
+          .number()
+          .nullish()
+          .describe(
+            "Lower bound of typical admitted ACT composite (≈25th percentile, 1-36)",
+          ),
+        actHigh: zod
+          .number()
+          .nullish()
+          .describe(
+            "Upper bound of typical admitted ACT composite (≈75th percentile, 1-36)",
+          ),
+        selectivityTier: zod.enum([
+          "most_selective",
+          "highly_selective",
+          "selective",
+          "accessible",
+        ]),
+      })
+      .optional()
+      .describe(
+        "Estimated admissions selectivity used to compute Reach\/Match\/Safety",
+      ),
+  }),
+  savedAt: zod.string().describe("ISO timestamp when the college was saved"),
+});
+export const ListMyCollegesResponse = zod.array(ListMyCollegesResponseItem);
+
+/**
+ * @summary Save a college to My Colleges
+ */
+
+export const CreateMyCollegeBody = zod.object({
+  major: zod.string().min(1),
+  collegeName: zod.string().min(1),
+  college: zod.object({
+    rank: zod.number(),
+    name: zod.string(),
+    location: zod.string(),
+    highlights: zod.string(),
+    admissionsProfile: zod
+      .object({
+        gpaLow: zod
+          .number()
+          .nullish()
+          .describe(
+            "Lower bound of typical admitted GPA (≈25th percentile, 0-4 scale)",
+          ),
+        gpaHigh: zod
+          .number()
+          .nullish()
+          .describe(
+            "Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)",
+          ),
+        satLow: zod
+          .number()
+          .nullish()
+          .describe(
+            "Lower bound of typical admitted SAT total (≈25th percentile, 400-1600)",
+          ),
+        satHigh: zod
+          .number()
+          .nullish()
+          .describe(
+            "Upper bound of typical admitted SAT total (≈75th percentile, 400-1600)",
+          ),
+        actLow: zod
+          .number()
+          .nullish()
+          .describe(
+            "Lower bound of typical admitted ACT composite (≈25th percentile, 1-36)",
+          ),
+        actHigh: zod
+          .number()
+          .nullish()
+          .describe(
+            "Upper bound of typical admitted ACT composite (≈75th percentile, 1-36)",
+          ),
+        selectivityTier: zod.enum([
+          "most_selective",
+          "highly_selective",
+          "selective",
+          "accessible",
+        ]),
+      })
+      .optional()
+      .describe(
+        "Estimated admissions selectivity used to compute Reach\/Match\/Safety",
+      ),
+  }),
+});
+
+/**
+ * Imports previously device-stored colleges; duplicates are skipped
+ * @summary Bulk import saved colleges (idempotent)
+ */
+
+export const importMyCollegesBodyItemsMax = 500;
+
+export const ImportMyCollegesBody = zod.object({
+  items: zod
+    .array(
+      zod.object({
+        major: zod.string().min(1),
+        collegeName: zod.string().min(1),
+        college: zod.object({
+          rank: zod.number(),
+          name: zod.string(),
+          location: zod.string(),
+          highlights: zod.string(),
+          admissionsProfile: zod
+            .object({
+              gpaLow: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Lower bound of typical admitted GPA (≈25th percentile, 0-4 scale)",
+                ),
+              gpaHigh: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)",
+                ),
+              satLow: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Lower bound of typical admitted SAT total (≈25th percentile, 400-1600)",
+                ),
+              satHigh: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Upper bound of typical admitted SAT total (≈75th percentile, 400-1600)",
+                ),
+              actLow: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Lower bound of typical admitted ACT composite (≈25th percentile, 1-36)",
+                ),
+              actHigh: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Upper bound of typical admitted ACT composite (≈75th percentile, 1-36)",
+                ),
+              selectivityTier: zod.enum([
+                "most_selective",
+                "highly_selective",
+                "selective",
+                "accessible",
+              ]),
+            })
+            .optional()
+            .describe(
+              "Estimated admissions selectivity used to compute Reach\/Match\/Safety",
+            ),
+        }),
+      }),
+    )
+    .max(importMyCollegesBodyItemsMax),
+});
+
+export const ImportMyCollegesResponse = zod.object({
+  imported: zod.number(),
+  skipped: zod.number(),
+});
+
+/**
+ * @summary Update a saved college (status, notes, deadlines)
+ */
+export const UpdateMyCollegeParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const updateMyCollegeBodyNotesMax = 5000;
+
+export const updateMyCollegeBodyEarlyDecisionDeadlineRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+export const updateMyCollegeBodyRegularDecisionDeadlineRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+export const updateMyCollegeBodyFafsaDeadlineRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+
+export const UpdateMyCollegeBody = zod.object({
+  applicationStatus: zod
+    .enum([
+      "not_applied",
+      "applied",
+      "interviewed",
+      "accepted",
+      "rejected",
+      "waitlisted",
+    ])
+    .optional(),
+  notes: zod.string().max(updateMyCollegeBodyNotesMax).optional(),
+  earlyDecisionDeadline: zod
+    .string()
+    .regex(updateMyCollegeBodyEarlyDecisionDeadlineRegExp)
+    .nullish(),
+  regularDecisionDeadline: zod
+    .string()
+    .regex(updateMyCollegeBodyRegularDecisionDeadlineRegExp)
+    .nullish(),
+  fafsaDeadline: zod
+    .string()
+    .regex(updateMyCollegeBodyFafsaDeadlineRegExp)
+    .nullish(),
+});
+
+export const updateMyCollegeResponseEarlyDecisionDeadlineRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+export const updateMyCollegeResponseRegularDecisionDeadlineRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+export const updateMyCollegeResponseFafsaDeadlineRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+
+export const UpdateMyCollegeResponse = zod.object({
+  id: zod.number(),
+  major: zod.string(),
+  collegeName: zod.string(),
+  applicationStatus: zod.enum([
+    "not_applied",
+    "applied",
+    "interviewed",
+    "accepted",
+    "rejected",
+    "waitlisted",
+  ]),
+  notes: zod.string(),
+  earlyDecisionDeadline: zod
+    .string()
+    .regex(updateMyCollegeResponseEarlyDecisionDeadlineRegExp)
+    .nullable()
+    .describe("Calendar date as YYYY-MM-DD"),
+  regularDecisionDeadline: zod
+    .string()
+    .regex(updateMyCollegeResponseRegularDecisionDeadlineRegExp)
+    .nullable()
+    .describe("Calendar date as YYYY-MM-DD"),
+  fafsaDeadline: zod
+    .string()
+    .regex(updateMyCollegeResponseFafsaDeadlineRegExp)
+    .nullable()
+    .describe("Calendar date as YYYY-MM-DD"),
+  college: zod.object({
+    rank: zod.number(),
+    name: zod.string(),
+    location: zod.string(),
+    highlights: zod.string(),
+    admissionsProfile: zod
+      .object({
+        gpaLow: zod
+          .number()
+          .nullish()
+          .describe(
+            "Lower bound of typical admitted GPA (≈25th percentile, 0-4 scale)",
+          ),
+        gpaHigh: zod
+          .number()
+          .nullish()
+          .describe(
+            "Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)",
+          ),
+        satLow: zod
+          .number()
+          .nullish()
+          .describe(
+            "Lower bound of typical admitted SAT total (≈25th percentile, 400-1600)",
+          ),
+        satHigh: zod
+          .number()
+          .nullish()
+          .describe(
+            "Upper bound of typical admitted SAT total (≈75th percentile, 400-1600)",
+          ),
+        actLow: zod
+          .number()
+          .nullish()
+          .describe(
+            "Lower bound of typical admitted ACT composite (≈25th percentile, 1-36)",
+          ),
+        actHigh: zod
+          .number()
+          .nullish()
+          .describe(
+            "Upper bound of typical admitted ACT composite (≈75th percentile, 1-36)",
+          ),
+        selectivityTier: zod.enum([
+          "most_selective",
+          "highly_selective",
+          "selective",
+          "accessible",
+        ]),
+      })
+      .optional()
+      .describe(
+        "Estimated admissions selectivity used to compute Reach\/Match\/Safety",
+      ),
+  }),
+  savedAt: zod.string().describe("ISO timestamp when the college was saved"),
+});
+
+/**
+ * @summary Remove a saved college
+ */
+export const DeleteMyCollegeParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Aggregate user statistics (admin only)
+ */
+export const GetAdminStatsResponse = zod.object({
+  totalUsers: zod.number(),
+  activeLast7Days: zod.number(),
+  totalSavedColleges: zod.number(),
+  gradeDistribution: zod.array(
+    zod.object({
+      gradeLevel: zod.number().nullable(),
+      count: zod.number(),
+    }),
+  ),
+  topMajors: zod.array(
+    zod.object({
+      label: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  topColleges: zod.array(
+    zod.object({
+      label: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  statusCounts: zod.array(
+    zod.object({
+      label: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * @summary List all users (admin only)
+ */
+export const ListAdminUsersResponseItem = zod.object({
+  userId: zod.string(),
+  email: zod.string().nullable(),
+  name: zod.string().nullable(),
+  gradeLevel: zod.number().nullable(),
+  savedCollegeCount: zod.number(),
+  createdAt: zod
+    .string()
+    .nullable()
+    .describe("ISO timestamp of account creation"),
+  lastSeenAt: zod
+    .string()
+    .nullable()
+    .describe("ISO timestamp of last activity"),
+});
+export const ListAdminUsersResponse = zod.array(ListAdminUsersResponseItem);

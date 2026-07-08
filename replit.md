@@ -38,16 +38,26 @@ artifacts-monorepo/
 └── package.json
 ```
 
-## Application: Major Explorer
+## Application: Major Explorer ("Next Steps")
 
 A web app where users type in a college major and instantly get:
 - A concise 5-7 sentence description of the major
 - A ranked list of the top 10 US colleges for that major
 
-**Tech:** React + Vite frontend, Express API backend, OpenAI (gpt-5.2) for data generation.
+Plus signed-in features (Clerk auth):
+- **My Colleges** — saved per user in Postgres (keyed by Clerk userId), with application status tracker, per-college deadlines (Early Decision / Regular Decision / FAFSA), and notes. A one-time client-side effect imports pre-account localStorage data into the DB.
+- **Roadmap** — grade-level selection (9-12, persisted server-side) with a college-prep roadmap per grade.
+- **Compare** — side-by-side comparison of two saved majors (client-side, from localStorage saved majors).
+- **Admin dashboard** — stats, charts, and users table; gated server-side by the `ADMIN_EMAILS` env var (comma-separated emails). The Admin nav tab only appears when `GET /api/me` returns `isAdmin: true`.
+- GPA/SAT/ACT profile stays localStorage-only by design (privacy).
+
+**Tech:** React + Vite frontend, Express API backend, OpenAI (gpt-5.2) for data generation, Clerk auth, Drizzle + Postgres.
 
 **Key endpoints:**
 - `POST /api/majors/lookup` — accepts `{ major: string }`, returns `{ major, description, topColleges[] }`
+- `GET/PATCH /api/me` — profile (`gradeLevel`, `isAdmin`)
+- `GET/POST /api/my-colleges`, `PATCH/DELETE /api/my-colleges/:id`, `POST /api/my-colleges/import` — per-user saved colleges (status, deadlines, notes)
+- `GET /api/admin/stats`, `GET /api/admin/users` — admin-only
 
 ## TypeScript & Composite Projects
 

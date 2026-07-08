@@ -143,3 +143,147 @@ export interface ChatReply {
 export interface ErrorResponse {
   error: string;
 }
+
+export interface Me {
+  userId: string;
+  /** @nullable */
+  email: string | null;
+  /**
+   * High school grade level (9-12)
+   * @nullable
+   */
+  gradeLevel: number | null;
+  isAdmin: boolean;
+}
+
+export interface ProfileUpdate {
+  /**
+   * High school grade level (9-12), or null to clear
+   * @minimum 9
+   * @maximum 12
+   * @nullable
+   */
+  gradeLevel?: number | null;
+}
+
+export type ApplicationStatus =
+  (typeof ApplicationStatus)[keyof typeof ApplicationStatus];
+
+export const ApplicationStatus = {
+  not_applied: "not_applied",
+  applied: "applied",
+  interviewed: "interviewed",
+  accepted: "accepted",
+  rejected: "rejected",
+  waitlisted: "waitlisted",
+} as const;
+
+export interface MyCollegeItem {
+  id: number;
+  major: string;
+  collegeName: string;
+  applicationStatus: ApplicationStatus;
+  notes: string;
+  /**
+   * Calendar date as YYYY-MM-DD
+   * @nullable
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
+  earlyDecisionDeadline: string | null;
+  /**
+   * Calendar date as YYYY-MM-DD
+   * @nullable
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
+  regularDecisionDeadline: string | null;
+  /**
+   * Calendar date as YYYY-MM-DD
+   * @nullable
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
+  fafsaDeadline: string | null;
+  college: College;
+  /** ISO timestamp when the college was saved */
+  savedAt: string;
+}
+
+export interface MyCollegeInput {
+  /** @minLength 1 */
+  major: string;
+  /** @minLength 1 */
+  collegeName: string;
+  college: College;
+}
+
+export interface MyCollegeUpdate {
+  applicationStatus?: ApplicationStatus;
+  /** @maxLength 5000 */
+  notes?: string;
+  /**
+   * @nullable
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
+  earlyDecisionDeadline?: string | null;
+  /**
+   * @nullable
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
+  regularDecisionDeadline?: string | null;
+  /**
+   * @nullable
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
+  fafsaDeadline?: string | null;
+}
+
+export interface MyCollegeImportInput {
+  /** @maxItems 500 */
+  items: MyCollegeInput[];
+}
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+}
+
+export interface GradeCount {
+  /** @nullable */
+  gradeLevel: number | null;
+  count: number;
+}
+
+export interface LabelCount {
+  label: string;
+  count: number;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  activeLast7Days: number;
+  totalSavedColleges: number;
+  gradeDistribution: GradeCount[];
+  topMajors: LabelCount[];
+  topColleges: LabelCount[];
+  statusCounts: LabelCount[];
+}
+
+export interface AdminUser {
+  userId: string;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  name: string | null;
+  /** @nullable */
+  gradeLevel: number | null;
+  savedCollegeCount: number;
+  /**
+   * ISO timestamp of account creation
+   * @nullable
+   */
+  createdAt: string | null;
+  /**
+   * ISO timestamp of last activity
+   * @nullable
+   */
+  lastSeenAt: string | null;
+}

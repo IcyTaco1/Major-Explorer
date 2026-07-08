@@ -11,6 +11,12 @@ tags:
     description: Health operations
   - name: majors
     description: College major lookup
+  - name: me
+    description: Current user profile
+  - name: my-colleges
+    description: Saved colleges for the current user
+  - name: admin
+    description: Admin-only statistics and user data
 paths:
   /healthz:
     get:
@@ -111,6 +117,251 @@ paths:
                 $ref: "#/components/schemas/ChatReply"
         "400":
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /me:
+    get:
+      operationId: getMe
+      tags: [me]
+      summary: Get current user profile
+      description: Returns the signed-in user's profile, including grade level and admin flag
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateMe
+      tags: [me]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /my-colleges:
+    get:
+      operationId: listMyColleges
+      tags: [my-colleges]
+      summary: List the current user's saved colleges
+      responses:
+        "200":
+          description: Saved colleges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MyCollegeItem"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createMyCollege
+      tags: [my-colleges]
+      summary: Save a college to My Colleges
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MyCollegeInput"
+      responses:
+        "201":
+          description: Saved college
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyCollegeItem"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /my-colleges/import:
+    post:
+      operationId: importMyColleges
+      tags: [my-colleges]
+      summary: Bulk import saved colleges (idempotent)
+      description: Imports previously device-stored colleges; duplicates are skipped
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MyCollegeImportInput"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /my-colleges/{id}:
+    patch:
+      operationId: updateMyCollege
+      tags: [my-colleges]
+      summary: Update a saved college (status, notes, deadlines)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MyCollegeUpdate"
+      responses:
+        "200":
+          description: Updated saved college
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyCollegeItem"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteMyCollege
+      tags: [my-colleges]
+      summary: Remove a saved college
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Aggregate user statistics (admin only)
+      responses:
+        "200":
+          description: Aggregate statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin]
+      summary: List all users (admin only)
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not an admin
           content:
             application/json:
               schema:
@@ -325,3 +576,204 @@ components:
           type: string
       required:
         - error
+    Me:
+      type: object
+      properties:
+        userId:
+          type: string
+        email:
+          type: ["string", "null"]
+        gradeLevel:
+          type: ["integer", "null"]
+          description: High school grade level (9-12)
+        isAdmin:
+          type: boolean
+      required:
+        - userId
+        - email
+        - gradeLevel
+        - isAdmin
+    ProfileUpdate:
+      type: object
+      properties:
+        gradeLevel:
+          type: ["integer", "null"]
+          minimum: 9
+          maximum: 12
+          description: High school grade level (9-12), or null to clear
+    ApplicationStatus:
+      type: string
+      enum: [not_applied, applied, interviewed, accepted, rejected, waitlisted]
+    MyCollegeItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        major:
+          type: string
+        collegeName:
+          type: string
+        applicationStatus:
+          $ref: "#/components/schemas/ApplicationStatus"
+        notes:
+          type: string
+        earlyDecisionDeadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Calendar date as YYYY-MM-DD
+        regularDecisionDeadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Calendar date as YYYY-MM-DD
+        fafsaDeadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Calendar date as YYYY-MM-DD
+        college:
+          $ref: "#/components/schemas/College"
+        savedAt:
+          type: string
+          description: ISO timestamp when the college was saved
+      required:
+        - id
+        - major
+        - collegeName
+        - applicationStatus
+        - notes
+        - earlyDecisionDeadline
+        - regularDecisionDeadline
+        - fafsaDeadline
+        - college
+        - savedAt
+    MyCollegeInput:
+      type: object
+      properties:
+        major:
+          type: string
+          minLength: 1
+        collegeName:
+          type: string
+          minLength: 1
+        college:
+          $ref: "#/components/schemas/College"
+      required:
+        - major
+        - collegeName
+        - college
+    MyCollegeUpdate:
+      type: object
+      properties:
+        applicationStatus:
+          $ref: "#/components/schemas/ApplicationStatus"
+        notes:
+          type: string
+          maxLength: 5000
+        earlyDecisionDeadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        regularDecisionDeadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        fafsaDeadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+    MyCollegeImportInput:
+      type: object
+      properties:
+        items:
+          type: array
+          maxItems: 500
+          items:
+            $ref: "#/components/schemas/MyCollegeInput"
+      required:
+        - items
+    ImportResult:
+      type: object
+      properties:
+        imported:
+          type: integer
+        skipped:
+          type: integer
+      required:
+        - imported
+        - skipped
+    GradeCount:
+      type: object
+      properties:
+        gradeLevel:
+          type: ["integer", "null"]
+        count:
+          type: integer
+      required:
+        - gradeLevel
+        - count
+    LabelCount:
+      type: object
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+      required:
+        - label
+        - count
+    AdminStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        activeLast7Days:
+          type: integer
+        totalSavedColleges:
+          type: integer
+        gradeDistribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/GradeCount"
+        topMajors:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabelCount"
+        topColleges:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabelCount"
+        statusCounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabelCount"
+      required:
+        - totalUsers
+        - activeLast7Days
+        - totalSavedColleges
+        - gradeDistribution
+        - topMajors
+        - topColleges
+        - statusCounts
+    AdminUser:
+      type: object
+      properties:
+        userId:
+          type: string
+        email:
+          type: ["string", "null"]
+        name:
+          type: ["string", "null"]
+        gradeLevel:
+          type: ["integer", "null"]
+        savedCollegeCount:
+          type: integer
+        createdAt:
+          type: ["string", "null"]
+          description: ISO timestamp of account creation
+        lastSeenAt:
+          type: ["string", "null"]
+          description: ISO timestamp of last activity
+      required:
+        - userId
+        - email
+        - name
+        - gradeLevel
+        - savedCollegeCount
+        - createdAt
+        - lastSeenAt

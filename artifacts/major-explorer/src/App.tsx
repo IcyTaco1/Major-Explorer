@@ -14,8 +14,17 @@ import ScrollReveal from "@/components/ScrollReveal";
 import PillNav, { type PillNavItem } from "@/components/PillNav";
 import TiltedCard from "@/components/TiltedCard";
 import GlassSurface from "@/components/GlassSurface";
-import { useLookupMajor, useGetMajorCurriculum, useChat, useGetCareers } from "@workspace/api-client-react";
-import type { College, CurriculumResponse, ChatMessage, CareerInfo } from "@workspace/api-client-react";
+import {
+  useLookupMajor, useGetMajorCurriculum, useChat, useGetCareers,
+  useGetMe, useListMyColleges, useCreateMyCollege, useDeleteMyCollege,
+  useImportMyColleges, getListMyCollegesQueryKey,
+} from "@workspace/api-client-react";
+import type { College, CurriculumResponse, ChatMessage, CareerInfo, MyCollegeItem } from "@workspace/api-client-react";
+import { computeFit, CollegeFitBadge, type FitTier, type SortMode } from "@/lib/collegeFit";
+import MyCollegesView from "@/views/MyCollegesView";
+import RoadmapView from "@/views/RoadmapView";
+import AdminView from "@/views/AdminView";
+import CompareView, { type CompareMajorData } from "@/views/CompareView";
 import {
   Search, GraduationCap, MapPin, Milestone, AlertCircle, X,
   ChevronRight, ChevronDown, ChevronUp, Bookmark, BookmarkCheck,
@@ -125,11 +134,11 @@ function loadSaved(): SavedData {
   catch { return {}; }
 }
 function persistSaved(data: SavedData) { localStorage.setItem(SAVED_KEY, JSON.stringify(data)); }
+// Legacy local storage — read once to migrate previously saved colleges to the account.
 function loadMyColleges(): MyCollege[] {
   try { return JSON.parse(localStorage.getItem(MY_COLLEGES_KEY) ?? "[]") ?? []; }
   catch { return []; }
 }
-function persistMyColleges(data: MyCollege[]) { localStorage.setItem(MY_COLLEGES_KEY, JSON.stringify(data)); }
 
 // User profile (GPA + goals). Stored ONLY in localStorage — the GPA is never
 // sent to the server or logged anywhere.
@@ -865,7 +874,6 @@ function CurriculumModal({ college, major, profile, onClose }: { college: Colleg
 }
 
 // ─── Saved View ───────────────────────────────────────────────────────
-type SortMode = "rank" | "alpha";
 
 function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
   saved: SavedData;
@@ -972,144 +980,6 @@ function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
         })}
       </div>
     </div>
-  );
-}
-
-// ─── My Colleges View ────────────────────────────────────────────────
-function MyCollegesView({ myColleges, onRemove, userGpa }: {
-  myColleges: MyCollege[];
-  onRemove: (collegeName: string, majorName: string) => void;
-  userGpa: number | null;
-}) {
-  const [sortMode, setSortMode] = useState<Record<string, SortMode>>({});
-
-  const grouped = myColleges.reduce<Record<string, MyCollege[]>>((acc, c) => {
-    (acc[c.majorName] ??= []).push(c);
-    return acc;
-  }, {});
-
-  const groups = Object.entries(grouped).sort(([, a], [, b]) => b[0].savedAt - a[0].savedAt);
-  const totalColleges = myColleges.length;
-
-  const getSortMode = (name: string): SortMode => sortMode[name] || "rank";
-  const toggleSort = (name: string) => setSortMode(prev => ({ ...prev, [name]: prev[name] === "alpha" ? "rank" : "alpha" }));
-
-  if (totalColleges === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 text-center px-4">
-        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-5">
-          <GraduationCap className="w-8 h-8 text-muted-foreground" />
-        </div>
-        <h3 className="text-xl font-serif text-foreground font-bold mb-2">No colleges saved yet</h3>
-        <p className="text-muted-foreground max-w-sm">Browse majors and bookmark colleges to "My Colleges" using the save button on each college card.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-10">
-      <div className="mb-8">
-        <h2 className="text-3xl font-serif font-bold text-foreground">My Colleges</h2>
-        <p className="text-muted-foreground mt-1">{totalColleges} saved {totalColleges === 1 ? "college" : "colleges"}</p>
-      </div>
-      <div className="space-y-6">
-        {groups.map(([majorName, colleges]) => {
-          const mode = getSortMode(majorName);
-          const sorted = mode === "alpha" ? [...colleges].sort((a, b) => a.name.localeCompare(b.name)) : [...colleges].sort((a, b) => a.rank - b.rank);
-          return (
-            <TiltedCard key={majorName}>
-              <RevealBorderGlow>
-              <div className="glass-panel rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 md:px-6 py-4 bg-background border-b border-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-                    <GraduationCap className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-serif font-bold text-foreground text-base leading-tight">{majorName}</h3>
-                    <p className="text-muted-foreground text-xs">{colleges.length} {colleges.length === 1 ? "college" : "colleges"}</p>
-                  </div>
-                </div>
-                <button onClick={() => toggleSort(majorName)} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-                  <SortAsc className="w-3.5 h-3.5" />
-                  {mode === "rank" ? "By Rank" : "A–Z"}
-                </button>
-              </div>
-              <ul className="divide-y divide-border">
-                {sorted.map((college) => (
-                  <li key={`${college.name}-${majorName}`} className="group flex items-center gap-3 px-5 md:px-6 py-3.5 hover:bg-muted transition-colors">
-                    <span className="w-7 h-7 rounded-lg bg-muted text-muted-foreground text-xs font-bold flex items-center justify-center flex-shrink-0">#{college.rank}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-foreground text-sm truncate">{college.name}</p>
-                        <CollegeFitBadge userGpa={userGpa} admissionsProfile={college.admissionsProfile} className="flex-shrink-0" />
-                      </div>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-muted-foreground" />
-                        <p className="text-muted-foreground text-xs">{college.location}</p>
-                      </div>
-                    </div>
-                    <button onClick={() => onRemove(college.name, majorName)} className="w-8 h-8 rounded-full hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0" title="Remove">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              </div>
-              </RevealBorderGlow>
-            </TiltedCard>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─── College fit (Reach / Match / Safety) ─────────────────────────────
-type FitTier = "safety" | "match" | "reach";
-
-// Fallback GPA bands by selectivity tier, used only when a college has no
-// explicit admitted-GPA range. Unweighted 4.0 scale.
-const TIER_GPA_BANDS: Record<string, { low: number; high: number }> = {
-  most_selective: { low: 3.9, high: 4.0 },
-  highly_selective: { low: 3.7, high: 3.95 },
-  selective: { low: 3.3, high: 3.8 },
-  accessible: { low: 2.5, high: 3.3 },
-};
-
-function computeFit(userGpa: number | null, ap: College["admissionsProfile"]): FitTier | null {
-  if (userGpa == null || !ap) return null;
-  const band = TIER_GPA_BANDS[ap.selectivityTier];
-  const low = ap.gpaLow ?? band?.low;
-  const high = ap.gpaHigh ?? band?.high;
-  if (low == null || high == null) return null;
-  if (userGpa >= high) return "safety";
-  if (userGpa >= low) return "match";
-  return "reach";
-}
-
-const FIT_BADGE: Record<FitTier, { label: string; cls: string }> = {
-  safety: { label: "Safety", cls: "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:ring-emerald-800" },
-  match: { label: "Match", cls: "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:ring-amber-800" },
-  reach: { label: "Reach", cls: "bg-rose-100 text-rose-700 ring-rose-200 dark:bg-rose-900/40 dark:text-rose-300 dark:ring-rose-800" },
-};
-
-function CollegeFitBadge({ userGpa, admissionsProfile, className = "" }: {
-  userGpa: number | null;
-  admissionsProfile: College["admissionsProfile"];
-  className?: string;
-}) {
-  const fit = computeFit(userGpa, admissionsProfile);
-  if (!fit) return null;
-  const { label, cls } = FIT_BADGE[fit];
-  return (
-    <span
-      title="Estimated fit based on your GPA vs the college's typical admitted GPA range. A rough guide, not a prediction."
-      className={`inline-flex items-center text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ring-1 ${cls} ${className}`}
-      data-testid={`badge-fit-${fit}`}
-    >
-      {label}
-    </span>
   );
 }
 
@@ -1311,11 +1181,11 @@ function CareerStats({ career }: { career: CareerInfo | null }) {
 }
 
 // ─── Explore View ──────────────────────────────────────────────────────
-function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor, userGpa, profile }: {
+function ExploreView({ saved, setSaved, myColleges, onToggleMyCollege, initialMajor, userGpa, profile }: {
   saved: SavedData;
   setSaved: (d: SavedData) => void;
-  myColleges: MyCollege[];
-  setMyColleges: (d: MyCollege[]) => void;
+  myColleges: MyCollegeItem[];
+  onToggleMyCollege: (college: College, majorName: string) => void;
   initialMajor?: string;
   userGpa: number | null;
   profile: UserProfile;
@@ -1422,7 +1292,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
   const isInSaved = (majorName: string, collegeName: string) =>
     !!saved[majorName]?.colleges.find((c) => c.name === collegeName);
   const isInMyColleges = (collegeName: string, majorName: string) =>
-    myColleges.some((c) => c.name === collegeName && c.majorName === majorName);
+    myColleges.some((c) => c.collegeName === collegeName && c.major === majorName);
   const isAnywhereSaved = (majorName: string, collegeName: string) =>
     isInSaved(majorName, collegeName) || isInMyColleges(collegeName, majorName);
 
@@ -1438,13 +1308,6 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
     setSaved(updated); persistSaved(updated);
   }, [saved, setSaved]);
 
-  const toggleMyCollege = useCallback((college: College, majorName: string) => {
-    const already = myColleges.some((c) => c.name === college.name && c.majorName === majorName);
-    const updated = already
-      ? myColleges.filter((c) => !(c.name === college.name && c.majorName === majorName))
-      : [...myColleges, { ...college, majorName, savedAt: Date.now() }];
-    setMyColleges(updated); persistMyColleges(updated);
-  }, [myColleges, setMyColleges]);
 
   const isIdle = lookupMajor.isIdle && !lookupMajor.data;
   const isLoading = lookupMajor.isPending;
@@ -1698,7 +1561,7 @@ function ExploreView({ saved, setSaved, myColleges, setMyColleges, initialMajor,
                             </button>
                             <button
                               className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors text-left"
-                              onClick={(e) => { e.stopPropagation(); toggleMyCollege(college, result.major); }}
+                              onClick={(e) => { e.stopPropagation(); onToggleMyCollege(college, result.major); }}
                             >
                               <div className={`w-5 h-5 rounded flex items-center justify-center border flex-shrink-0 ${inMyColleges ? "bg-primary border-primary" : "border-border"}`}>
                                 {inMyColleges && <Check className="w-3 h-3 text-primary-foreground" />}
@@ -1956,7 +1819,7 @@ function SuggestedView({ results, onExplore, onRetake }: {
 }
 
 // ─── App Shell ────────────────────────────────────────────────────────
-type AppView = "explore" | "suggested" | "careers" | "colleges" | "saved";
+type AppView = "explore" | "suggested" | "careers" | "roadmap" | "compare" | "colleges" | "saved" | "admin";
 
 // ─── Onboarding & profile (GPA + goals) ───────────────────────────────
 const GOAL_PRESETS = [
@@ -2492,8 +2355,67 @@ function CareersView() {
 function AppShell() {
   const [view, setView] = useState<AppView>("explore");
   const [saved, setSaved] = useState<SavedData>(loadSaved);
-  const [myColleges, setMyColleges] = useState<MyCollege[]>(loadMyColleges);
   const [profile, setProfile] = useState<UserProfile>(loadProfile);
+  const qc = useQueryClient();
+  const meQuery = useGetMe();
+  const isAdmin = meQuery.data?.isAdmin ?? false;
+  const myCollegesQuery = useListMyColleges();
+  const myColleges = useMemo(() => myCollegesQuery.data ?? [], [myCollegesQuery.data]);
+  const createMyCollege = useCreateMyCollege();
+  const deleteMyCollege = useDeleteMyCollege();
+  const importMyColleges = useImportMyColleges();
+  const importAttemptedRef = useRef(false);
+
+  const invalidateMyColleges = useCallback(() => {
+    qc.invalidateQueries({ queryKey: getListMyCollegesQueryKey() });
+  }, [qc]);
+
+  // One-time migration: move colleges saved in localStorage (pre-accounts) into the DB.
+  useEffect(() => {
+    if (!myCollegesQuery.isSuccess || importAttemptedRef.current) return;
+    importAttemptedRef.current = true;
+    const local = loadMyColleges();
+    if (local.length === 0) return;
+    const items = local
+      .filter((c) => typeof c?.name === "string" && typeof c?.majorName === "string")
+      .map((c) => {
+        const { majorName, savedAt, ...college } = c;
+        void savedAt;
+        return { major: majorName, collegeName: college.name, college };
+      });
+    if (items.length === 0) { localStorage.removeItem(MY_COLLEGES_KEY); return; }
+    importMyColleges.mutate(
+      { data: { items } },
+      {
+        onSuccess: () => {
+          localStorage.removeItem(MY_COLLEGES_KEY);
+          invalidateMyColleges();
+        },
+      },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myCollegesQuery.isSuccess]);
+
+  const toggleMyCollege = useCallback((college: College, majorName: string) => {
+    const existing = myColleges.find((c) => c.collegeName === college.name && c.major === majorName);
+    if (existing) {
+      deleteMyCollege.mutate({ id: existing.id }, { onSuccess: invalidateMyColleges });
+    } else {
+      createMyCollege.mutate(
+        { data: { major: majorName, collegeName: college.name, college } },
+        { onSuccess: invalidateMyColleges },
+      );
+    }
+  }, [myColleges, createMyCollege, deleteMyCollege, invalidateMyColleges]);
+
+  const compareMajors = useMemo<CompareMajorData[]>(
+    () => Object.values(saved).map((m) => ({
+      majorName: m.majorName,
+      description: m.description,
+      colleges: m.colleges,
+    })),
+    [saved],
+  );
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState<Theme>(loadTheme);
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => resolveTheme(loadTheme()));
@@ -2549,11 +2471,6 @@ function AppShell() {
     setSaved(updated); persistSaved(updated);
   };
 
-  const removeMyCollege = (collegeName: string, majorName: string) => {
-    const updated = myColleges.filter((c) => !(c.name === collegeName && c.majorName === majorName));
-    setMyColleges(updated); persistMyColleges(updated);
-  };
-
   const handleQuizComplete = (majors: MajorSuggestion[]) => {
     setQuizResults(majors);
     localStorage.setItem(QUIZ_RESULTS_KEY, JSON.stringify(majors));
@@ -2606,9 +2523,12 @@ function AppShell() {
     { id: "explore", label: "Explore" },
     { id: "suggested", label: "Suggested" },
     { id: "careers", label: "Careers" },
+    { id: "roadmap", label: "Roadmap" },
+    { id: "compare", label: "Compare" },
     { id: "colleges", label: "My Colleges", count: savedCollegeCount },
     { id: "saved", label: "Saved", count: savedMajorCount },
   ];
+  if (isAdmin) navItems.push({ id: "admin", label: "Admin" });
 
   return (
     <div className="min-h-screen w-full flex flex-col">
@@ -2658,7 +2578,7 @@ function AppShell() {
       {view === "explore" && (
         <ExploreView
           saved={saved} setSaved={setSaved}
-          myColleges={myColleges} setMyColleges={setMyColleges}
+          myColleges={myColleges} onToggleMyCollege={toggleMyCollege}
           initialMajor={exploreInitialMajor}
           userGpa={profile.gpa}
           profile={profile}
@@ -2672,12 +2592,13 @@ function AppShell() {
         />
       )}
       {view === "careers" && <CareersView />}
-      {view === "colleges" && (
-        <MyCollegesView myColleges={myColleges} onRemove={removeMyCollege} userGpa={profile.gpa} />
-      )}
+      {view === "roadmap" && <RoadmapView />}
+      {view === "compare" && <CompareView majors={compareMajors} userGpa={profile.gpa} />}
+      {view === "colleges" && <MyCollegesView userGpa={profile.gpa} />}
       {view === "saved" && (
         <SavedView saved={saved} onUnsaveMajor={unsaveMajor} onUnsaveCollege={unsaveCollege} userGpa={profile.gpa} />
       )}
+      {view === "admin" && (isAdmin ? <AdminView /> : null)}
 
       {showSettings && (
         <SettingsDialog

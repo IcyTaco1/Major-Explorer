@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser, useAuth } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Toaster } from "@/components/ui/toaster";
@@ -17,7 +17,7 @@ import GlassSurface from "@/components/GlassSurface";
 import {
   useLookupMajor, useGetMajorCurriculum, useChat, useGetCareers,
   useGetMe, useListMyColleges, useCreateMyCollege, useDeleteMyCollege,
-  useImportMyColleges, getListMyCollegesQueryKey,
+  useImportMyColleges, getListMyCollegesQueryKey, setAuthTokenGetter,
 } from "@workspace/api-client-react";
 import type { College, CurriculumResponse, ChatMessage, CareerInfo, MyCollegeItem } from "@workspace/api-client-react";
 import { computeFit, CollegeFitBadge, type FitTier, type SortMode } from "@/lib/collegeFit";
@@ -2738,6 +2738,26 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+// ─── API auth bridge ──────────────────────────────────────────────────
+// Registers a Clerk token getter with the generated API client so every
+// request carries an Authorization: Bearer header. Children render only
+// after the getter is registered, so no query can fire without it.
+function ApiAuthBridge({ children }: { children: React.ReactNode }) {
+  const { getToken } = useAuth();
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setAuthTokenGetter(() => getTokenRef.current());
+    setReady(true);
+    return () => setAuthTokenGetter(null);
+  }, []);
+
+  if (!ready) return null;
+  return <>{children}</>;
+}
+
 // ─── Clerk Provider + Routes ──────────────────────────────────────────
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
@@ -2758,16 +2778,18 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
-        <TooltipProvider>
-          <Switch>
-            <Route path="/" component={HomeRedirect} />
-            <Route path="/app" component={AppRoute} />
-            <Route path="/sign-in/*?" component={SignInPage} />
-            <Route path="/sign-up/*?" component={SignUpPage} />
-            <Route component={NotFound} />
-          </Switch>
-          <Toaster />
-        </TooltipProvider>
+        <ApiAuthBridge>
+          <TooltipProvider>
+            <Switch>
+              <Route path="/" component={HomeRedirect} />
+              <Route path="/app" component={AppRoute} />
+              <Route path="/sign-in/*?" component={SignInPage} />
+              <Route path="/sign-up/*?" component={SignUpPage} />
+              <Route component={NotFound} />
+            </Switch>
+            <Toaster />
+          </TooltipProvider>
+        </ApiAuthBridge>
       </QueryClientProvider>
     </ClerkProvider>
   );

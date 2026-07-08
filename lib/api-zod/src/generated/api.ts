@@ -214,6 +214,64 @@ export const UpdateMeResponse = zod.object({
 });
 
 /**
+ * Returns the college's official Early Decision, Regular Decision, and FAFSA/financial-aid priority deadlines for the upcoming admission cycle, researched from the college's own website and other reliable sources. Results are cached server-side.
+ * @summary Get official application deadlines for a college
+ */
+export const getCollegeDeadlinesBodyCollegeNameMax = 200;
+
+export const GetCollegeDeadlinesBody = zod.object({
+  collegeName: zod.string().min(1).max(getCollegeDeadlinesBodyCollegeNameMax),
+});
+
+export const getCollegeDeadlinesResponseEarlyDecisionRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+export const getCollegeDeadlinesResponseRegularDecisionRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+export const getCollegeDeadlinesResponseFafsaRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+
+export const GetCollegeDeadlinesResponse = zod.object({
+  collegeName: zod.string(),
+  cycle: zod
+    .string()
+    .describe('Admission cycle the dates apply to (e.g. \"Fall 2027 entry\")'),
+  earlyDecision: zod
+    .string()
+    .regex(getCollegeDeadlinesResponseEarlyDecisionRegExp)
+    .nullable()
+    .describe(
+      "Early Decision (or Early Action, see notes) deadline as YYYY-MM-DD",
+    ),
+  regularDecision: zod
+    .string()
+    .regex(getCollegeDeadlinesResponseRegularDecisionRegExp)
+    .nullable()
+    .describe("Regular Decision deadline as YYYY-MM-DD"),
+  fafsa: zod
+    .string()
+    .regex(getCollegeDeadlinesResponseFafsaRegExp)
+    .nullable()
+    .describe("FAFSA \/ financial aid priority deadline as YYYY-MM-DD"),
+  notes: zod
+    .string()
+    .describe(
+      'Short caveats, e.g. \"offers Early Action instead of Early Decision\"',
+    ),
+  sources: zod.array(
+    zod.object({
+      title: zod.string(),
+      url: zod.string(),
+    }),
+  ),
+  fetchedAt: zod
+    .string()
+    .describe("ISO timestamp when the data was researched"),
+});
+
+/**
  * @summary List the current user's saved colleges
  */
 export const listMyCollegesResponseEarlyDecisionDeadlineRegExp = new RegExp(

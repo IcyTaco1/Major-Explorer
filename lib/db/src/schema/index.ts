@@ -19,3 +19,4 @@
 
 export * from "./userProfiles";
 export * from "./myColleges";
+export * from "./collegeDeadlines";

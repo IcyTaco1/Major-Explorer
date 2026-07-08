@@ -55,6 +55,7 @@ Plus signed-in features (Clerk auth):
 
 **Key endpoints:**
 - `POST /api/majors/lookup` — accepts `{ major: string }`, returns `{ major, description, topColleges[] }`
+- `POST /api/colleges/deadlines` — auth-required; researches a college's official ED/RD/FAFSA-priority deadlines via OpenAI Responses API + web_search (strict JSON schema output), cached in `college_deadlines` table (60-day TTL; 1-hour TTL when no dates found so failures are retryable). UI: "Find official dates" button per saved college in My Colleges with sources + one-click "Use these dates".
 - `GET/PATCH /api/me` — profile (`gradeLevel`, `isAdmin`)
 - `GET/POST /api/my-colleges`, `PATCH/DELETE /api/my-colleges/:id`, `POST /api/my-colleges/import` — per-user saved colleges (status, deadlines, notes)
 - `GET /api/admin/stats`, `GET /api/admin/users` — admin-only

@@ -236,6 +236,48 @@ export interface MyCollegeUpdate {
   fafsaDeadline?: string | null;
 }
 
+export interface CollegeDeadlinesRequest {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  collegeName: string;
+}
+
+export interface DeadlineSource {
+  title: string;
+  url: string;
+}
+
+export interface CollegeDeadlines {
+  collegeName: string;
+  /** Admission cycle the dates apply to (e.g. "Fall 2027 entry") */
+  cycle: string;
+  /**
+   * Early Decision (or Early Action, see notes) deadline as YYYY-MM-DD
+   * @nullable
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
+  earlyDecision: string | null;
+  /**
+   * Regular Decision deadline as YYYY-MM-DD
+   * @nullable
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
+  regularDecision: string | null;
+  /**
+   * FAFSA / financial aid priority deadline as YYYY-MM-DD
+   * @nullable
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
+  fafsa: string | null;
+  /** Short caveats, e.g. "offers Early Action instead of Early Decision" */
+  notes: string;
+  sources: DeadlineSource[];
+  /** ISO timestamp when the data was researched */
+  fetchedAt: string;
+}
+
 export interface MyCollegeImportInput {
   /** @maxItems 500 */
   items: MyCollegeInput[];

@@ -22,6 +22,8 @@ import type {
   CareerInfo,
   ChatReply,
   ChatRequest,
+  CollegeDeadlines,
+  CollegeDeadlinesRequest,
   CurriculumRequest,
   CurriculumResponse,
   ErrorResponse,
@@ -605,6 +607,93 @@ export const useUpdateMe = <
   TContext
 > => {
   return useMutation(getUpdateMeMutationOptions(options));
+};
+
+/**
+ * Returns the college's official Early Decision, Regular Decision, and FAFSA/financial-aid priority deadlines for the upcoming admission cycle, researched from the college's own website and other reliable sources. Results are cached server-side.
+ * @summary Get official application deadlines for a college
+ */
+export const getGetCollegeDeadlinesUrl = () => {
+  return `/api/colleges/deadlines`;
+};
+
+export const getCollegeDeadlines = async (
+  collegeDeadlinesRequest: CollegeDeadlinesRequest,
+  options?: RequestInit,
+): Promise<CollegeDeadlines> => {
+  return customFetch<CollegeDeadlines>(getGetCollegeDeadlinesUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(collegeDeadlinesRequest),
+  });
+};
+
+export const getGetCollegeDeadlinesMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getCollegeDeadlines>>,
+    TError,
+    { data: BodyType<CollegeDeadlinesRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getCollegeDeadlines>>,
+  TError,
+  { data: BodyType<CollegeDeadlinesRequest> },
+  TContext
+> => {
+  const mutationKey = ["getCollegeDeadlines"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getCollegeDeadlines>>,
+    { data: BodyType<CollegeDeadlinesRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return getCollegeDeadlines(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetCollegeDeadlinesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getCollegeDeadlines>>
+>;
+export type GetCollegeDeadlinesMutationBody = BodyType<CollegeDeadlinesRequest>;
+export type GetCollegeDeadlinesMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get official application deadlines for a college
+ */
+export const useGetCollegeDeadlines = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getCollegeDeadlines>>,
+    TError,
+    { data: BodyType<CollegeDeadlinesRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getCollegeDeadlines>>,
+  TError,
+  { data: BodyType<CollegeDeadlinesRequest> },
+  TContext
+> => {
+  return useMutation(getGetCollegeDeadlinesMutationOptions(options));
 };
 
 /**

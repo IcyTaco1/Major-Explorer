@@ -15,6 +15,8 @@ tags:
     description: Current user profile
   - name: my-colleges
     description: Saved colleges for the current user
+  - name: colleges
+    description: College reference data (official deadlines)
   - name: admin
     description: Admin-only statistics and user data
 paths:
@@ -165,6 +167,47 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /colleges/deadlines:
+    post:
+      operationId: getCollegeDeadlines
+      tags: [colleges]
+      summary: Get official application deadlines for a college
+      description: >-
+        Returns the college's official Early Decision, Regular Decision, and
+        FAFSA/financial-aid priority deadlines for the upcoming admission
+        cycle, researched from the college's own website and other reliable
+        sources. Results are cached server-side.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CollegeDeadlinesRequest"
+      responses:
+        "200":
+          description: Official deadlines
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollegeDeadlines"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Deadline research failed
           content:
             application/json:
               schema:
@@ -677,6 +720,64 @@ components:
         fafsaDeadline:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}$'
+    CollegeDeadlinesRequest:
+      type: object
+      properties:
+        collegeName:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+        - collegeName
+    DeadlineSource:
+      type: object
+      properties:
+        title:
+          type: string
+        url:
+          type: string
+      required:
+        - title
+        - url
+    CollegeDeadlines:
+      type: object
+      properties:
+        collegeName:
+          type: string
+        cycle:
+          type: string
+          description: Admission cycle the dates apply to (e.g. "Fall 2027 entry")
+        earlyDecision:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Early Decision (or Early Action, see notes) deadline as YYYY-MM-DD
+        regularDecision:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Regular Decision deadline as YYYY-MM-DD
+        fafsa:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: FAFSA / financial aid priority deadline as YYYY-MM-DD
+        notes:
+          type: string
+          description: Short caveats, e.g. "offers Early Action instead of Early Decision"
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeadlineSource"
+        fetchedAt:
+          type: string
+          description: ISO timestamp when the data was researched
+      required:
+        - collegeName
+        - cycle
+        - earlyDecision
+        - regularDecision
+        - fafsa
+        - notes
+        - sources
+        - fetchedAt
     MyCollegeImportInput:
       type: object
       properties:

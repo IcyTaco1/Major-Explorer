@@ -4,15 +4,17 @@ import {
   useListMyColleges,
   useUpdateMyCollege,
   useDeleteMyCollege,
+  useGetCollegeDeadlines,
   getListMyCollegesQueryKey,
 } from "@workspace/api-client-react";
-import type { MyCollegeItem, ApplicationStatus, MyCollegeUpdate } from "@workspace/api-client-react";
+import type { MyCollegeItem, ApplicationStatus, MyCollegeUpdate, CollegeDeadlines } from "@workspace/api-client-react";
 import TiltedCard from "@/components/TiltedCard";
 import RevealBorderGlow from "@/components/RevealBorderGlow";
 import { CollegeFitBadge, type SortMode } from "@/lib/collegeFit";
 import {
   GraduationCap, MapPin, SortAsc, Trash2, ChevronDown,
   CalendarDays, AlertCircle, RotateCcw, Check,
+  Sparkles, Loader2, ExternalLink,
 } from "lucide-react";
 
 export const STATUS_META: Record<ApplicationStatus, { label: string; cls: string; dot: string }> = {
@@ -70,10 +72,116 @@ function DeadlineChip({ item }: { item: MyCollegeItem }) {
   );
 }
 
-function CollegeDetail({ item, onPatch, saving }: {
+const OFFICIAL_FIELDS: { key: keyof Pick<CollegeDeadlines, "earlyDecision" | "regularDecision" | "fafsa">; patchKey: "earlyDecisionDeadline" | "regularDecisionDeadline" | "fafsaDeadline"; label: string }[] = [
+  { key: "earlyDecision", patchKey: "earlyDecisionDeadline", label: "Early Decision" },
+  { key: "regularDecision", patchKey: "regularDecisionDeadline", label: "Regular Decision" },
+  { key: "fafsa", patchKey: "fafsaDeadline", label: "FAFSA" },
+];
+
+function OfficialDeadlines({ item, official, fetching, error, onFetch, onPatch, saving }: {
+  item: MyCollegeItem;
+  official: CollegeDeadlines | undefined;
+  fetching: boolean;
+  error: boolean;
+  onFetch: () => void;
+  onPatch: (data: MyCollegeUpdate) => void;
+  saving: boolean;
+}) {
+  if (!official) {
+    return (
+      <div className="mt-2.5">
+        <button
+          disabled={fetching}
+          onClick={onFetch}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ring-1 ring-border bg-background text-muted-foreground hover:text-foreground transition-colors disabled:opacity-60"
+          data-testid={`button-fetch-deadlines-${item.id}`}
+        >
+          {fetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+          {fetching ? "Checking official sources…" : "Find official dates"}
+        </button>
+        {error && (
+          <p className="text-xs text-rose-500 mt-1.5" data-testid={`text-deadlines-error-${item.id}`}>
+            Couldn't look up deadlines right now. Please try again.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  const found = OFFICIAL_FIELDS.filter(({ key }) => official[key]);
+  const applicable = found.filter(({ key, patchKey }) => official[key] !== item[patchKey]);
+
+  return (
+    <div className="mt-3 rounded-xl border border-border bg-background/70 px-3.5 py-3" data-testid={`panel-official-deadlines-${item.id}`}>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <Sparkles className="w-3.5 h-3.5 text-primary" />
+        <p className="text-xs font-bold text-foreground">
+          Official dates{official.cycle ? ` · ${official.cycle}` : ""}
+        </p>
+      </div>
+      {found.length > 0 ? (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mb-1.5">
+          {found.map(({ key, label }) => (
+            <span key={key} className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">{label}:</span> {formatDeadline(official[key] as string)}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground mb-1.5">No published dates found for this college.</p>
+      )}
+      {official.notes && <p className="text-xs text-muted-foreground italic mb-1.5">{official.notes}</p>}
+      {official.sources.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mb-1.5">
+          {official.sources.slice(0, 3).map((s) => (
+            <a
+              key={s.url}
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline max-w-[16rem] truncate"
+              title={s.title}
+            >
+              <ExternalLink className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{s.title}</span>
+            </a>
+          ))}
+        </div>
+      )}
+      {applicable.length > 0 && (
+        <button
+          disabled={saving}
+          onClick={() => {
+            const patch: MyCollegeUpdate = {};
+            for (const { key, patchKey } of applicable) {
+              (patch as Record<string, string>)[patchKey] = official[key] as string;
+            }
+            onPatch(patch);
+          }}
+          className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground text-xs font-semibold px-3.5 py-1.5 rounded-full hover:bg-primary/90 transition-colors disabled:opacity-50"
+          data-testid={`button-apply-deadlines-${item.id}`}
+        >
+          <Check className="w-3.5 h-3.5" />
+          Use these dates
+        </button>
+      )}
+      {found.length > 0 && applicable.length === 0 && (
+        <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+          <Check className="w-3.5 h-3.5" /> Dates applied
+        </span>
+      )}
+    </div>
+  );
+}
+
+function CollegeDetail({ item, onPatch, saving, official, fetching, fetchError, onFetchOfficial }: {
   item: MyCollegeItem;
   onPatch: (data: MyCollegeUpdate) => void;
   saving: boolean;
+  official: CollegeDeadlines | undefined;
+  fetching: boolean;
+  fetchError: boolean;
+  onFetchOfficial: () => void;
 }) {
   const [notes, setNotes] = useState(item.notes);
   const [justSaved, setJustSaved] = useState(false);
@@ -125,6 +233,15 @@ function CollegeDetail({ item, onPatch, saving }: {
             </label>
           ))}
         </div>
+        <OfficialDeadlines
+          item={item}
+          official={official}
+          fetching={fetching}
+          error={fetchError}
+          onFetch={onFetchOfficial}
+          onPatch={onPatch}
+          saving={saving}
+        />
       </div>
 
       <div>
@@ -161,10 +278,16 @@ function CollegeDetail({ item, onPatch, saving }: {
 export default function MyCollegesView({ userGpa }: { userGpa: number | null }) {
   const [sortMode, setSortMode] = useState<Record<string, SortMode>>({});
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  // Fetched official deadlines, kept in the parent so the info panel survives
+  // CollegeDetail remounts (its key changes whenever a deadline is applied).
+  const [official, setOfficial] = useState<Record<number, CollegeDeadlines>>({});
+  const [fetchingDeadlinesId, setFetchingDeadlinesId] = useState<number | null>(null);
+  const [deadlinesErrorId, setDeadlinesErrorId] = useState<number | null>(null);
   const qc = useQueryClient();
   const listQuery = useListMyColleges();
   const updateMut = useUpdateMyCollege();
   const deleteMut = useDeleteMyCollege();
+  const deadlinesMut = useGetCollegeDeadlines();
 
   const invalidate = () => qc.invalidateQueries({ queryKey: getListMyCollegesQueryKey() });
 
@@ -173,6 +296,20 @@ export default function MyCollegesView({ userGpa }: { userGpa: number | null }) 
 
   const removeItem = (id: number) =>
     deleteMut.mutate({ id }, { onSuccess: invalidate });
+
+  const fetchOfficialDeadlines = (item: MyCollegeItem) => {
+    if (fetchingDeadlinesId !== null) return;
+    setFetchingDeadlinesId(item.id);
+    setDeadlinesErrorId(null);
+    deadlinesMut.mutate(
+      { data: { collegeName: item.collegeName } },
+      {
+        onSuccess: (data) => setOfficial((prev) => ({ ...prev, [item.id]: data })),
+        onError: () => setDeadlinesErrorId(item.id),
+        onSettled: () => setFetchingDeadlinesId(null),
+      },
+    );
+  };
 
   if (listQuery.isPending) {
     return (
@@ -325,6 +462,10 @@ export default function MyCollegesView({ userGpa }: { userGpa: number | null }) 
                           item={item}
                           onPatch={(data) => patchItem(item.id, data)}
                           saving={saving}
+                          official={official[item.id]}
+                          fetching={fetchingDeadlinesId === item.id}
+                          fetchError={deadlinesErrorId === item.id}
+                          onFetchOfficial={() => fetchOfficialDeadlines(item)}
                         />
                       )}
                     </li>

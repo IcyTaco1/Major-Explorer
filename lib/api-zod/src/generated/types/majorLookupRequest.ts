@@ -7,6 +7,10 @@
  */
 
 export interface MajorLookupRequest {
-  /** The college major to look up */
+  /**
+   * The college major to look up
+   * @minLength 1
+   * @maxLength 120
+   */
   major: string;
 }

@@ -10,7 +10,11 @@ export interface HealthStatus {
 }
 
 export interface MajorLookupRequest {
-  /** The college major to look up */
+  /**
+   * The college major to look up
+   * @minLength 1
+   * @maxLength 120
+   */
   major: string;
 }
 
@@ -95,9 +99,17 @@ export interface MajorLookupResponse {
 }
 
 export interface CurriculumRequest {
-  /** The college major */
+  /**
+   * The college major
+   * @minLength 1
+   * @maxLength 120
+   */
   major: string;
-  /** The college name */
+  /**
+   * The college name
+   * @minLength 1
+   * @maxLength 200
+   */
   college: string;
 }
 
@@ -129,10 +141,15 @@ export const ChatMessageRole = {
 
 export interface ChatMessage {
   role: ChatMessageRole;
+  /** @maxLength 4000 */
   content: string;
 }
 
 export interface ChatRequest {
+  /**
+   * @minItems 1
+   * @maxItems 50
+   */
   messages: ChatMessage[];
 }
 
@@ -144,6 +161,16 @@ export interface ErrorResponse {
   error: string;
 }
 
+/**
+ * A quiz-suggested major with the reason it was recommended
+ */
+export interface MajorSuggestion {
+  /** @maxLength 200 */
+  major: string;
+  /** @maxLength 1000 */
+  reason: string;
+}
+
 export interface Me {
   userId: string;
   /** @nullable */
@@ -153,6 +180,27 @@ export interface Me {
    * @nullable
    */
   gradeLevel: number | null;
+  /**
+   * High school GPA (0-5 scale, weighted allowed)
+   * @nullable
+   */
+  gpa: number | null;
+  /**
+   * SAT total score (400-1600)
+   * @nullable
+   */
+  sat: number | null;
+  /**
+   * ACT composite score (1-36)
+   * @nullable
+   */
+  act: number | null;
+  /** The student's stated goals / target schools */
+  goals: string;
+  /** Latest interest-quiz major suggestions */
+  quizResults: MajorSuggestion[];
+  /** Whether the user has completed or dismissed the interest quiz */
+  quizDone: boolean;
   isAdmin: boolean;
 }
 
@@ -164,6 +212,39 @@ export interface ProfileUpdate {
    * @nullable
    */
   gradeLevel?: number | null;
+  /**
+   * High school GPA (0-5 scale), or null to clear
+   * @minimum 0
+   * @maximum 5
+   * @nullable
+   */
+  gpa?: number | null;
+  /**
+   * SAT total score, or null to clear
+   * @minimum 400
+   * @maximum 1600
+   * @nullable
+   */
+  sat?: number | null;
+  /**
+   * ACT composite score, or null to clear
+   * @minimum 1
+   * @maximum 36
+   * @nullable
+   */
+  act?: number | null;
+  /**
+   * The student's stated goals / target schools
+   * @maxLength 500
+   */
+  goals?: string;
+  /**
+   * Latest interest-quiz major suggestions
+   * @maxItems 20
+   */
+  quizResults?: MajorSuggestion[];
+  /** Whether the user has completed or dismissed the interest quiz */
+  quizDone?: boolean;
 }
 
 export type ApplicationStatus =

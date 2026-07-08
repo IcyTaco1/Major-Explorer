@@ -7,8 +7,16 @@
  */
 
 export interface CurriculumRequest {
-  /** The college major */
+  /**
+   * The college major
+   * @minLength 1
+   * @maxLength 120
+   */
   major: string;
-  /** The college name */
+  /**
+   * The college name
+   * @minLength 1
+   * @maxLength 200
+   */
   college: string;
 }

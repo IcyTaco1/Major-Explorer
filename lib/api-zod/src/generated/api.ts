@@ -19,8 +19,14 @@ export const HealthCheckResponse = zod.object({
  * Returns a description and a ranked list of top colleges for a given major
  * @summary Look up a college major
  */
+export const lookupMajorBodyMajorMax = 120;
+
 export const LookupMajorBody = zod.object({
-  major: zod.string().describe("The college major to look up"),
+  major: zod
+    .string()
+    .min(1)
+    .max(lookupMajorBodyMajorMax)
+    .describe("The college major to look up"),
 });
 
 export const LookupMajorResponse = zod.object({
@@ -113,9 +119,21 @@ export const LookupMajorResponse = zod.object({
  * Returns a year-by-year course breakdown for a major at a specific college
  * @summary Get 4-year curriculum for a major at a specific college
  */
+export const getMajorCurriculumBodyMajorMax = 120;
+
+export const getMajorCurriculumBodyCollegeMax = 200;
+
 export const GetMajorCurriculumBody = zod.object({
-  major: zod.string().describe("The college major"),
-  college: zod.string().describe("The college name"),
+  major: zod
+    .string()
+    .min(1)
+    .max(getMajorCurriculumBodyMajorMax)
+    .describe("The college major"),
+  college: zod
+    .string()
+    .min(1)
+    .max(getMajorCurriculumBodyCollegeMax)
+    .describe("The college name"),
 });
 
 export const GetMajorCurriculumResponse = zod.object({
@@ -161,13 +179,20 @@ export const GetCareersResponse = zod.array(GetCareersResponseItem);
  * Send a conversation history and receive an AI response
  * @summary Chat with AI advisor
  */
+export const chatBodyMessagesItemContentMax = 4000;
+
+export const chatBodyMessagesMax = 50;
+
 export const ChatBody = zod.object({
-  messages: zod.array(
-    zod.object({
-      role: zod.enum(["user", "assistant"]),
-      content: zod.string(),
-    }),
-  ),
+  messages: zod
+    .array(
+      zod.object({
+        role: zod.enum(["user", "assistant"]),
+        content: zod.string().max(chatBodyMessagesItemContentMax),
+      }),
+    )
+    .min(1)
+    .max(chatBodyMessagesMax),
 });
 
 export const ChatResponse = zod.object({
@@ -178,6 +203,10 @@ export const ChatResponse = zod.object({
  * Returns the signed-in user's profile, including grade level and admin flag
  * @summary Get current user profile
  */
+export const getMeResponseQuizResultsItemMajorMax = 200;
+
+export const getMeResponseQuizResultsItemReasonMax = 1000;
+
 export const GetMeResponse = zod.object({
   userId: zod.string(),
   email: zod.string().nullable(),
@@ -185,6 +214,26 @@ export const GetMeResponse = zod.object({
     .number()
     .nullable()
     .describe("High school grade level (9-12)"),
+  gpa: zod
+    .number()
+    .nullable()
+    .describe("High school GPA (0-5 scale, weighted allowed)"),
+  sat: zod.number().nullable().describe("SAT total score (400-1600)"),
+  act: zod.number().nullable().describe("ACT composite score (1-36)"),
+  goals: zod.string().describe("The student's stated goals \/ target schools"),
+  quizResults: zod
+    .array(
+      zod
+        .object({
+          major: zod.string().max(getMeResponseQuizResultsItemMajorMax),
+          reason: zod.string().max(getMeResponseQuizResultsItemReasonMax),
+        })
+        .describe("A quiz-suggested major with the reason it was recommended"),
+    )
+    .describe("Latest interest-quiz major suggestions"),
+  quizDone: zod
+    .boolean()
+    .describe("Whether the user has completed or dismissed the interest quiz"),
   isAdmin: zod.boolean(),
 });
 
@@ -194,6 +243,22 @@ export const GetMeResponse = zod.object({
 export const updateMeBodyGradeLevelMin = 9;
 export const updateMeBodyGradeLevelMax = 12;
 
+export const updateMeBodyGpaMin = 0;
+export const updateMeBodyGpaMax = 5;
+
+export const updateMeBodySatMin = 400;
+export const updateMeBodySatMax = 1600;
+
+export const updateMeBodyActMax = 36;
+
+export const updateMeBodyGoalsMax = 500;
+
+export const updateMeBodyQuizResultsItemMajorMax = 200;
+
+export const updateMeBodyQuizResultsItemReasonMax = 1000;
+
+export const updateMeBodyQuizResultsMax = 20;
+
 export const UpdateMeBody = zod.object({
   gradeLevel: zod
     .number()
@@ -201,7 +266,50 @@ export const UpdateMeBody = zod.object({
     .max(updateMeBodyGradeLevelMax)
     .nullish()
     .describe("High school grade level (9-12), or null to clear"),
+  gpa: zod
+    .number()
+    .min(updateMeBodyGpaMin)
+    .max(updateMeBodyGpaMax)
+    .nullish()
+    .describe("High school GPA (0-5 scale), or null to clear"),
+  sat: zod
+    .number()
+    .min(updateMeBodySatMin)
+    .max(updateMeBodySatMax)
+    .nullish()
+    .describe("SAT total score, or null to clear"),
+  act: zod
+    .number()
+    .min(1)
+    .max(updateMeBodyActMax)
+    .nullish()
+    .describe("ACT composite score, or null to clear"),
+  goals: zod
+    .string()
+    .max(updateMeBodyGoalsMax)
+    .optional()
+    .describe("The student's stated goals \/ target schools"),
+  quizResults: zod
+    .array(
+      zod
+        .object({
+          major: zod.string().max(updateMeBodyQuizResultsItemMajorMax),
+          reason: zod.string().max(updateMeBodyQuizResultsItemReasonMax),
+        })
+        .describe("A quiz-suggested major with the reason it was recommended"),
+    )
+    .max(updateMeBodyQuizResultsMax)
+    .optional()
+    .describe("Latest interest-quiz major suggestions"),
+  quizDone: zod
+    .boolean()
+    .optional()
+    .describe("Whether the user has completed or dismissed the interest quiz"),
 });
+
+export const updateMeResponseQuizResultsItemMajorMax = 200;
+
+export const updateMeResponseQuizResultsItemReasonMax = 1000;
 
 export const UpdateMeResponse = zod.object({
   userId: zod.string(),
@@ -210,6 +318,26 @@ export const UpdateMeResponse = zod.object({
     .number()
     .nullable()
     .describe("High school grade level (9-12)"),
+  gpa: zod
+    .number()
+    .nullable()
+    .describe("High school GPA (0-5 scale, weighted allowed)"),
+  sat: zod.number().nullable().describe("SAT total score (400-1600)"),
+  act: zod.number().nullable().describe("ACT composite score (1-36)"),
+  goals: zod.string().describe("The student's stated goals \/ target schools"),
+  quizResults: zod
+    .array(
+      zod
+        .object({
+          major: zod.string().max(updateMeResponseQuizResultsItemMajorMax),
+          reason: zod.string().max(updateMeResponseQuizResultsItemReasonMax),
+        })
+        .describe("A quiz-suggested major with the reason it was recommended"),
+    )
+    .describe("Latest interest-quiz major suggestions"),
+  quizDone: zod
+    .boolean()
+    .describe("Whether the user has completed or dismissed the interest quiz"),
   isAdmin: zod.boolean(),
 });
 

@@ -30,6 +30,7 @@ export * from "./importResult";
 export * from "./labelCount";
 export * from "./majorLookupRequest";
 export * from "./majorLookupResponse";
+export * from "./majorSuggestion";
 export * from "./me";
 export * from "./myCollegeImportInput";
 export * from "./myCollegeInput";

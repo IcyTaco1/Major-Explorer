@@ -9,5 +9,6 @@ import type { ChatMessageRole } from "./chatMessageRole";
 
 export interface ChatMessage {
   role: ChatMessageRole;
+  /** @maxLength 4000 */
   content: string;
 }

@@ -58,6 +58,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /majors/curriculum:
     post:
       operationId: getMajorCurriculum
@@ -79,6 +91,18 @@ paths:
                 $ref: "#/components/schemas/CurriculumResponse"
         "400":
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
           content:
             application/json:
               schema:
@@ -119,6 +143,18 @@ paths:
                 $ref: "#/components/schemas/ChatReply"
         "400":
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
           content:
             application/json:
               schema:
@@ -423,6 +459,8 @@ components:
       properties:
         major:
           type: string
+          minLength: 1
+          maxLength: 120
           description: The college major to look up
       required:
         - major
@@ -535,9 +573,13 @@ components:
       properties:
         major:
           type: string
+          minLength: 1
+          maxLength: 120
           description: The college major
         college:
           type: string
+          minLength: 1
+          maxLength: 200
           description: The college name
       required:
         - major
@@ -593,6 +635,7 @@ components:
           enum: [user, assistant]
         content:
           type: string
+          maxLength: 4000
       required:
         - role
         - content
@@ -601,6 +644,8 @@ components:
       properties:
         messages:
           type: array
+          minItems: 1
+          maxItems: 50
           items:
             $ref: "#/components/schemas/ChatMessage"
       required:
@@ -619,6 +664,19 @@ components:
           type: string
       required:
         - error
+    MajorSuggestion:
+      type: object
+      description: A quiz-suggested major with the reason it was recommended
+      properties:
+        major:
+          type: string
+          maxLength: 200
+        reason:
+          type: string
+          maxLength: 1000
+      required:
+        - major
+        - reason
     Me:
       type: object
       properties:
@@ -629,12 +687,38 @@ components:
         gradeLevel:
           type: ["integer", "null"]
           description: High school grade level (9-12)
+        gpa:
+          type: ["number", "null"]
+          description: High school GPA (0-5 scale, weighted allowed)
+        sat:
+          type: ["integer", "null"]
+          description: SAT total score (400-1600)
+        act:
+          type: ["integer", "null"]
+          description: ACT composite score (1-36)
+        goals:
+          type: string
+          description: The student's stated goals / target schools
+        quizResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/MajorSuggestion"
+          description: Latest interest-quiz major suggestions
+        quizDone:
+          type: boolean
+          description: Whether the user has completed or dismissed the interest quiz
         isAdmin:
           type: boolean
       required:
         - userId
         - email
         - gradeLevel
+        - gpa
+        - sat
+        - act
+        - goals
+        - quizResults
+        - quizDone
         - isAdmin
     ProfileUpdate:
       type: object
@@ -644,6 +728,34 @@ components:
           minimum: 9
           maximum: 12
           description: High school grade level (9-12), or null to clear
+        gpa:
+          type: ["number", "null"]
+          minimum: 0
+          maximum: 5
+          description: High school GPA (0-5 scale), or null to clear
+        sat:
+          type: ["integer", "null"]
+          minimum: 400
+          maximum: 1600
+          description: SAT total score, or null to clear
+        act:
+          type: ["integer", "null"]
+          minimum: 1
+          maximum: 36
+          description: ACT composite score, or null to clear
+        goals:
+          type: string
+          maxLength: 500
+          description: The student's stated goals / target schools
+        quizResults:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/MajorSuggestion"
+          description: Latest interest-quiz major suggestions
+        quizDone:
+          type: boolean
+          description: Whether the user has completed or dismissed the interest quiz
     ApplicationStatus:
       type: string
       enum: [not_applied, applied, interviewed, accepted, rejected, waitlisted]

@@ -8,5 +8,9 @@
 import type { ChatMessage } from "./chatMessage";
 
 export interface ChatRequest {
+  /**
+   * @minItems 1
+   * @maxItems 50
+   */
   messages: ChatMessage[];
 }

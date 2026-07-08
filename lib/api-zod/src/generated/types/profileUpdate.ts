@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { MajorSuggestion } from "./majorSuggestion";
 
 export interface ProfileUpdate {
   /**
@@ -14,4 +15,37 @@ export interface ProfileUpdate {
    * @nullable
    */
   gradeLevel?: number | null;
+  /**
+   * High school GPA (0-5 scale), or null to clear
+   * @minimum 0
+   * @maximum 5
+   * @nullable
+   */
+  gpa?: number | null;
+  /**
+   * SAT total score, or null to clear
+   * @minimum 400
+   * @maximum 1600
+   * @nullable
+   */
+  sat?: number | null;
+  /**
+   * ACT composite score, or null to clear
+   * @minimum 1
+   * @maximum 36
+   * @nullable
+   */
+  act?: number | null;
+  /**
+   * The student's stated goals / target schools
+   * @maxLength 500
+   */
+  goals?: string;
+  /**
+   * Latest interest-quiz major suggestions
+   * @maxItems 20
+   */
+  quizResults?: MajorSuggestion[];
+  /** Whether the user has completed or dismissed the interest quiz */
+  quizDone?: boolean;
 }

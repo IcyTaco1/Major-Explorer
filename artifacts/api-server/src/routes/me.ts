@@ -22,6 +22,12 @@ async function buildMeResponse(userId: string) {
     userId,
     email: info?.primaryEmail ?? profile?.email ?? null,
     gradeLevel: profile?.gradeLevel ?? null,
+    gpa: profile?.gpa ?? null,
+    sat: profile?.sat ?? null,
+    act: profile?.act ?? null,
+    goals: profile?.goals ?? "",
+    quizResults: profile?.quizResults ?? [],
+    quizDone: profile?.quizDone ?? false,
     isAdmin,
   };
 }
@@ -45,10 +51,19 @@ router.put("/me", requireAuth, async (req, res) => {
   try {
     const info = await getClerkUserInfo(userId).catch(() => null);
     await ensureProfile(userId, info?.primaryEmail);
-    if (parsed.data.gradeLevel !== undefined) {
+    const d = parsed.data;
+    const updates: Record<string, unknown> = {};
+    if (d.gradeLevel !== undefined) updates.gradeLevel = d.gradeLevel ?? null;
+    if (d.gpa !== undefined) updates.gpa = d.gpa ?? null;
+    if (d.sat !== undefined) updates.sat = d.sat ?? null;
+    if (d.act !== undefined) updates.act = d.act ?? null;
+    if (d.goals !== undefined) updates.goals = d.goals;
+    if (d.quizResults !== undefined) updates.quizResults = d.quizResults;
+    if (d.quizDone !== undefined) updates.quizDone = d.quizDone;
+    if (Object.keys(updates).length > 0) {
       await db
         .update(userProfilesTable)
-        .set({ gradeLevel: parsed.data.gradeLevel ?? null })
+        .set(updates)
         .where(eq(userProfilesTable.clerkUserId, userId));
     }
     res.json(await buildMeResponse(userId));

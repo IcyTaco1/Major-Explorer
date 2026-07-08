@@ -8,8 +8,13 @@ import {
   findCareerBySoc,
   getOccupationWhitelist,
 } from "@workspace/bls-data";
+import { requireAuth } from "../middlewares/requireAuth";
+import { rateLimit } from "../middlewares/rateLimit";
 
 const router: IRouter = Router();
+
+// AI-backed lookups are expensive (long OpenAI calls), so cap per-user usage.
+const aiRateLimit = rateLimit({ windowMs: 60_000, max: 10 });
 
 // ── Real BLS occupation whitelist given to the AI classifier ────────────────
 // The AI never invents wages or growth figures. It only picks the single SOC
@@ -113,7 +118,7 @@ function scrubWages(text: string): { text: string; scrubbed: boolean } {
   };
 }
 
-router.post("/majors/lookup", async (req, res) => {
+router.post("/majors/lookup", requireAuth, aiRateLimit, async (req, res) => {
   const parsed = LookupMajorBody.safeParse(req.body);
 
   if (!parsed.success) {
@@ -262,7 +267,7 @@ router.get("/careers", (_req, res) => {
   res.json(getAllCareers());
 });
 
-router.post("/majors/curriculum", async (req, res) => {
+router.post("/majors/curriculum", requireAuth, aiRateLimit, async (req, res) => {
   const parsed = GetMajorCurriculumBody.safeParse(req.body);
 
   if (!parsed.success) {

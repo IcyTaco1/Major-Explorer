@@ -11,7 +11,15 @@ export const GOAL_PRESETS = [
   "Start my own venture",
 ];
 
+export const GRADE_OPTIONS = [
+  { value: 9, label: "9th", name: "Freshman" },
+  { value: 10, label: "10th", name: "Sophomore" },
+  { value: 11, label: "11th", name: "Junior" },
+  { value: 12, label: "12th", name: "Senior" },
+] as const;
+
 export function useGpaGoals(initial: UserProfile) {
+  const [gradeLevel, setGradeLevel] = useState<number | null>(initial.gradeLevel ?? null);
   const [gpa, setGpa] = useState(initial.gpa == null ? "" : String(initial.gpa));
   const [sat, setSat] = useState(initial.sat == null ? "" : String(initial.sat));
   const [act, setAct] = useState(initial.act == null ? "" : String(initial.act));
@@ -30,18 +38,41 @@ export function useGpaGoals(initial: UserProfile) {
   const actValid = actNum == null || (Number.isFinite(actNum) && actNum >= 1 && actNum <= 36);
 
   const profile: UserProfile = {
+    gradeLevel,
     gpa: gpaValid ? gpaNum : null,
     sat: satValid ? satNum : null,
     act: actValid ? actNum : null,
     goals: goals.trim(),
   };
-  return { gpa, setGpa, sat, setSat, act, setAct, goals, setGoals, gpaValid, satValid, actValid, profile };
+  return { gradeLevel, setGradeLevel, gpa, setGpa, sat, setSat, act, setAct, goals, setGoals, gpaValid, satValid, actValid, profile };
 }
 
 export function GpaGoalsControls({ state }: { state: ReturnType<typeof useGpaGoals> }) {
-  const { gpa, setGpa, sat, setSat, act, setAct, goals, setGoals, gpaValid, satValid, actValid } = state;
+  const { gradeLevel, setGradeLevel, gpa, setGpa, sat, setSat, act, setAct, goals, setGoals, gpaValid, satValid, actValid } = state;
   return (
     <div className="space-y-5 text-left">
+      <div>
+        <span className="block text-sm font-semibold text-foreground mb-1.5">
+          Your grade <span className="font-normal text-muted-foreground">(optional)</span>
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {GRADE_OPTIONS.map(({ value, label, name }) => {
+            const active = gradeLevel === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setGradeLevel(active ? null : value)}
+                className={`text-sm font-semibold px-4 py-2 rounded-full border transition-colors ${active ? "bg-primary border-primary text-primary-foreground" : "glass-panel border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground"}`}
+                data-testid={`button-grade-${value}`}
+              >
+                {label} <span className="font-normal opacity-80">· {name}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1.5">Powers your College Prep Roadmap. Saved privately to your account.</p>
+      </div>
       <div>
         <label htmlFor="gpa-input" className="block text-sm font-semibold text-foreground mb-1.5">
           Your GPA <span className="font-normal text-muted-foreground">(unweighted, 4.0 scale)</span>

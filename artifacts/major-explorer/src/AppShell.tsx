@@ -318,14 +318,15 @@ export default function AppShell() {
     const updates: ProfileUpdate = {};
 
     const serverHasProfile =
-      me.gpa != null || me.sat != null || me.act != null || me.goals.trim() !== "";
+      me.gradeLevel != null || me.gpa != null || me.sat != null || me.act != null || me.goals.trim() !== "";
     if (serverHasProfile) {
-      const merged: UserProfile = { gpa: me.gpa, sat: me.sat, act: me.act, goals: me.goals };
+      const merged: UserProfile = { gradeLevel: me.gradeLevel, gpa: me.gpa, sat: me.sat, act: me.act, goals: me.goals };
       setProfile(merged);
       persistProfile(merged);
     } else {
       const local = loadProfile();
-      if (local.gpa != null || local.sat != null || local.act != null || local.goals.trim() !== "") {
+      if (local.gradeLevel != null || local.gpa != null || local.sat != null || local.act != null || local.goals.trim() !== "") {
+        updates.gradeLevel = local.gradeLevel;
         updates.gpa = local.gpa;
         updates.sat = local.sat;
         updates.act = local.act;
@@ -363,13 +364,13 @@ export default function AppShell() {
 
   const handleProfileComplete = (p: UserProfile) => {
     setProfile(p); persistProfile(p);
-    pushProfileUpdate({ gpa: p.gpa, sat: p.sat, act: p.act, goals: p.goals });
+    pushProfileUpdate({ gradeLevel: p.gradeLevel, gpa: p.gpa, sat: p.sat, act: p.act, goals: p.goals });
     setQuizState("results");
   };
   const handleProfileSkip = () => setQuizState("results");
   const handleSaveProfile = (p: UserProfile) => {
     setProfile(p); persistProfile(p);
-    return pushProfileUpdate({ gpa: p.gpa, sat: p.sat, act: p.act, goals: p.goals });
+    return pushProfileUpdate({ gradeLevel: p.gradeLevel, gpa: p.gpa, sat: p.sat, act: p.act, goals: p.goals });
   };
 
   const handleExploreMajor = (major: string) => {
@@ -506,7 +507,7 @@ export default function AppShell() {
 
       {showSettings && (
         <SettingsDialog
-          initial={profile}
+          initial={{ ...profile, gradeLevel: meQuery.data?.gradeLevel ?? profile.gradeLevel ?? null }}
           onSaveProfile={handleSaveProfile}
           theme={theme}
           onChangeTheme={changeTheme}

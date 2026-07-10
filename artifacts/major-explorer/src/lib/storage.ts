@@ -34,13 +34,14 @@ export function loadMyColleges(): MyCollege[] {
 // User profile (GPA + test scores + goals). Cached in localStorage for fast
 // startup; the account (server) copy is the source of truth once loaded.
 export interface UserProfile {
+  gradeLevel: number | null;
   gpa: number | null;
   sat: number | null;
   act: number | null;
   goals: string;
 }
 export const PROFILE_KEY = "next-steps-profile";
-export const EMPTY_PROFILE: UserProfile = { gpa: null, sat: null, act: null, goals: "" };
+export const EMPTY_PROFILE: UserProfile = { gradeLevel: null, gpa: null, sat: null, act: null, goals: "" };
 export function loadProfile(): UserProfile {
   try {
     const raw = JSON.parse(localStorage.getItem(PROFILE_KEY) ?? "null");
@@ -49,6 +50,7 @@ export function loadProfile(): UserProfile {
     const inRange = (v: unknown, lo: number, hi: number): number | null =>
       typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? v : null;
     return {
+      gradeLevel: inRange(r.gradeLevel, 9, 12),
       gpa: inRange(r.gpa, 0, 4),
       sat: inRange(r.sat, 400, 1600),
       act: inRange(r.act, 1, 36),

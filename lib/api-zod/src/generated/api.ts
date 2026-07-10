@@ -841,3 +841,437 @@ export const ListAdminUsersResponseItem = zod.object({
     .describe("ISO timestamp of last activity"),
 });
 export const ListAdminUsersResponse = zod.array(ListAdminUsersResponseItem);
+
+/**
+ * @summary List the current user's saved (bookmarked) majors
+ */
+export const ListSavedMajorsResponseItem = zod.object({
+  id: zod.number(),
+  majorName: zod.string(),
+  description: zod.string(),
+  career: zod
+    .union([
+      zod
+        .object({
+          occupation: zod.string(),
+          socCode: zod.string(),
+          annualMedianWage: zod.number(),
+          annualEntryWage: zod.number(),
+          annualExperiencedWage: zod.number(),
+          projectedGrowthPct: zod.number(),
+          typicalEducation: zod.string(),
+          sourceName: zod.string(),
+          sourceUrl: zod.string(),
+          wageDataYear: zod.string(),
+          growthDataPeriod: zod.string(),
+        })
+        .describe(
+          "Real occupation data from the U.S. Bureau of Labor Statistics",
+        ),
+      zod.null(),
+    ])
+    .describe("Real BLS career data captured at save time, or null"),
+  colleges: zod.array(
+    zod
+      .object({
+        rank: zod.number(),
+        name: zod.string(),
+        location: zod.string(),
+        highlights: zod.string(),
+        admissionsProfile: zod
+          .object({
+            gpaLow: zod
+              .number()
+              .nullish()
+              .describe(
+                "Lower bound of typical admitted GPA (≈25th percentile, 0-4 scale)",
+              ),
+            gpaHigh: zod
+              .number()
+              .nullish()
+              .describe(
+                "Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)",
+              ),
+            satLow: zod
+              .number()
+              .nullish()
+              .describe(
+                "Lower bound of typical admitted SAT total (≈25th percentile, 400-1600)",
+              ),
+            satHigh: zod
+              .number()
+              .nullish()
+              .describe(
+                "Upper bound of typical admitted SAT total (≈75th percentile, 400-1600)",
+              ),
+            actLow: zod
+              .number()
+              .nullish()
+              .describe(
+                "Lower bound of typical admitted ACT composite (≈25th percentile, 1-36)",
+              ),
+            actHigh: zod
+              .number()
+              .nullish()
+              .describe(
+                "Upper bound of typical admitted ACT composite (≈75th percentile, 1-36)",
+              ),
+            selectivityTier: zod.enum([
+              "most_selective",
+              "highly_selective",
+              "selective",
+              "accessible",
+            ]),
+          })
+          .optional()
+          .describe(
+            "Estimated admissions selectivity used to compute Reach\/Match\/Safety",
+          ),
+      })
+      .and(
+        zod.object({
+          savedAt: zod
+            .number()
+            .describe("Epoch milliseconds when the college was bookmarked"),
+        }),
+      )
+      .describe("A College snapshot plus when it was bookmarked"),
+  ),
+  savedAt: zod
+    .string()
+    .describe("ISO timestamp when the major was first saved"),
+});
+export const ListSavedMajorsResponse = zod.array(ListSavedMajorsResponseItem);
+
+/**
+ * @summary Create or replace a saved major (by name) for the current user
+ */
+export const upsertSavedMajorBodyMajorNameMax = 200;
+
+export const upsertSavedMajorBodyDescriptionMax = 2000;
+
+export const upsertSavedMajorBodyCollegesMax = 15;
+
+export const UpsertSavedMajorBody = zod.object({
+  majorName: zod.string().min(1).max(upsertSavedMajorBodyMajorNameMax),
+  description: zod.string().max(upsertSavedMajorBodyDescriptionMax),
+  career: zod
+    .union([
+      zod
+        .object({
+          occupation: zod.string(),
+          socCode: zod.string(),
+          annualMedianWage: zod.number(),
+          annualEntryWage: zod.number(),
+          annualExperiencedWage: zod.number(),
+          projectedGrowthPct: zod.number(),
+          typicalEducation: zod.string(),
+          sourceName: zod.string(),
+          sourceUrl: zod.string(),
+          wageDataYear: zod.string(),
+          growthDataPeriod: zod.string(),
+        })
+        .describe(
+          "Real occupation data from the U.S. Bureau of Labor Statistics",
+        ),
+      zod.null(),
+    ])
+    .optional(),
+  colleges: zod
+    .array(
+      zod
+        .object({
+          rank: zod.number(),
+          name: zod.string(),
+          location: zod.string(),
+          highlights: zod.string(),
+          admissionsProfile: zod
+            .object({
+              gpaLow: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Lower bound of typical admitted GPA (≈25th percentile, 0-4 scale)",
+                ),
+              gpaHigh: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)",
+                ),
+              satLow: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Lower bound of typical admitted SAT total (≈25th percentile, 400-1600)",
+                ),
+              satHigh: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Upper bound of typical admitted SAT total (≈75th percentile, 400-1600)",
+                ),
+              actLow: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Lower bound of typical admitted ACT composite (≈25th percentile, 1-36)",
+                ),
+              actHigh: zod
+                .number()
+                .nullish()
+                .describe(
+                  "Upper bound of typical admitted ACT composite (≈75th percentile, 1-36)",
+                ),
+              selectivityTier: zod.enum([
+                "most_selective",
+                "highly_selective",
+                "selective",
+                "accessible",
+              ]),
+            })
+            .optional()
+            .describe(
+              "Estimated admissions selectivity used to compute Reach\/Match\/Safety",
+            ),
+        })
+        .and(
+          zod.object({
+            savedAt: zod
+              .number()
+              .describe("Epoch milliseconds when the college was bookmarked"),
+          }),
+        )
+        .describe("A College snapshot plus when it was bookmarked"),
+    )
+    .max(upsertSavedMajorBodyCollegesMax),
+});
+
+export const UpsertSavedMajorResponse = zod.object({
+  id: zod.number(),
+  majorName: zod.string(),
+  description: zod.string(),
+  career: zod
+    .union([
+      zod
+        .object({
+          occupation: zod.string(),
+          socCode: zod.string(),
+          annualMedianWage: zod.number(),
+          annualEntryWage: zod.number(),
+          annualExperiencedWage: zod.number(),
+          projectedGrowthPct: zod.number(),
+          typicalEducation: zod.string(),
+          sourceName: zod.string(),
+          sourceUrl: zod.string(),
+          wageDataYear: zod.string(),
+          growthDataPeriod: zod.string(),
+        })
+        .describe(
+          "Real occupation data from the U.S. Bureau of Labor Statistics",
+        ),
+      zod.null(),
+    ])
+    .describe("Real BLS career data captured at save time, or null"),
+  colleges: zod.array(
+    zod
+      .object({
+        rank: zod.number(),
+        name: zod.string(),
+        location: zod.string(),
+        highlights: zod.string(),
+        admissionsProfile: zod
+          .object({
+            gpaLow: zod
+              .number()
+              .nullish()
+              .describe(
+                "Lower bound of typical admitted GPA (≈25th percentile, 0-4 scale)",
+              ),
+            gpaHigh: zod
+              .number()
+              .nullish()
+              .describe(
+                "Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)",
+              ),
+            satLow: zod
+              .number()
+              .nullish()
+              .describe(
+                "Lower bound of typical admitted SAT total (≈25th percentile, 400-1600)",
+              ),
+            satHigh: zod
+              .number()
+              .nullish()
+              .describe(
+                "Upper bound of typical admitted SAT total (≈75th percentile, 400-1600)",
+              ),
+            actLow: zod
+              .number()
+              .nullish()
+              .describe(
+                "Lower bound of typical admitted ACT composite (≈25th percentile, 1-36)",
+              ),
+            actHigh: zod
+              .number()
+              .nullish()
+              .describe(
+                "Upper bound of typical admitted ACT composite (≈75th percentile, 1-36)",
+              ),
+            selectivityTier: zod.enum([
+              "most_selective",
+              "highly_selective",
+              "selective",
+              "accessible",
+            ]),
+          })
+          .optional()
+          .describe(
+            "Estimated admissions selectivity used to compute Reach\/Match\/Safety",
+          ),
+      })
+      .and(
+        zod.object({
+          savedAt: zod
+            .number()
+            .describe("Epoch milliseconds when the college was bookmarked"),
+        }),
+      )
+      .describe("A College snapshot plus when it was bookmarked"),
+  ),
+  savedAt: zod
+    .string()
+    .describe("ISO timestamp when the major was first saved"),
+});
+
+/**
+ * Imports previously device-stored majors; existing majors are skipped
+ * @summary Bulk import saved majors (idempotent)
+ */
+export const importSavedMajorsBodyItemsItemMajorNameMax = 200;
+
+export const importSavedMajorsBodyItemsItemDescriptionMax = 2000;
+
+export const importSavedMajorsBodyItemsItemCollegesMax = 15;
+
+export const importSavedMajorsBodyItemsMax = 100;
+
+export const ImportSavedMajorsBody = zod.object({
+  items: zod
+    .array(
+      zod.object({
+        majorName: zod
+          .string()
+          .min(1)
+          .max(importSavedMajorsBodyItemsItemMajorNameMax),
+        description: zod
+          .string()
+          .max(importSavedMajorsBodyItemsItemDescriptionMax),
+        career: zod
+          .union([
+            zod
+              .object({
+                occupation: zod.string(),
+                socCode: zod.string(),
+                annualMedianWage: zod.number(),
+                annualEntryWage: zod.number(),
+                annualExperiencedWage: zod.number(),
+                projectedGrowthPct: zod.number(),
+                typicalEducation: zod.string(),
+                sourceName: zod.string(),
+                sourceUrl: zod.string(),
+                wageDataYear: zod.string(),
+                growthDataPeriod: zod.string(),
+              })
+              .describe(
+                "Real occupation data from the U.S. Bureau of Labor Statistics",
+              ),
+            zod.null(),
+          ])
+          .optional(),
+        colleges: zod
+          .array(
+            zod
+              .object({
+                rank: zod.number(),
+                name: zod.string(),
+                location: zod.string(),
+                highlights: zod.string(),
+                admissionsProfile: zod
+                  .object({
+                    gpaLow: zod
+                      .number()
+                      .nullish()
+                      .describe(
+                        "Lower bound of typical admitted GPA (≈25th percentile, 0-4 scale)",
+                      ),
+                    gpaHigh: zod
+                      .number()
+                      .nullish()
+                      .describe(
+                        "Upper bound of typical admitted GPA (≈75th percentile, 0-4 scale)",
+                      ),
+                    satLow: zod
+                      .number()
+                      .nullish()
+                      .describe(
+                        "Lower bound of typical admitted SAT total (≈25th percentile, 400-1600)",
+                      ),
+                    satHigh: zod
+                      .number()
+                      .nullish()
+                      .describe(
+                        "Upper bound of typical admitted SAT total (≈75th percentile, 400-1600)",
+                      ),
+                    actLow: zod
+                      .number()
+                      .nullish()
+                      .describe(
+                        "Lower bound of typical admitted ACT composite (≈25th percentile, 1-36)",
+                      ),
+                    actHigh: zod
+                      .number()
+                      .nullish()
+                      .describe(
+                        "Upper bound of typical admitted ACT composite (≈75th percentile, 1-36)",
+                      ),
+                    selectivityTier: zod.enum([
+                      "most_selective",
+                      "highly_selective",
+                      "selective",
+                      "accessible",
+                    ]),
+                  })
+                  .optional()
+                  .describe(
+                    "Estimated admissions selectivity used to compute Reach\/Match\/Safety",
+                  ),
+              })
+              .and(
+                zod.object({
+                  savedAt: zod
+                    .number()
+                    .describe(
+                      "Epoch milliseconds when the college was bookmarked",
+                    ),
+                }),
+              )
+              .describe("A College snapshot plus when it was bookmarked"),
+          )
+          .max(importSavedMajorsBodyItemsItemCollegesMax),
+      }),
+    )
+    .max(importSavedMajorsBodyItemsMax),
+});
+
+export const ImportSavedMajorsResponse = zod.object({
+  imported: zod.number(),
+  skipped: zod.number(),
+});
+
+/**
+ * @summary Remove a saved major
+ */
+export const DeleteSavedMajorParams = zod.object({
+  id: zod.coerce.number(),
+});

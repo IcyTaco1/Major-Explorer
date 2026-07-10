@@ -25,7 +25,6 @@ export function loadSaved(): SavedData {
   try { return JSON.parse(localStorage.getItem(SAVED_KEY) ?? "{}") ?? {}; }
   catch { return {}; }
 }
-export function persistSaved(data: SavedData) { localStorage.setItem(SAVED_KEY, JSON.stringify(data)); }
 // Legacy local storage — read once to migrate previously saved colleges to the account.
 export function loadMyColleges(): MyCollege[] {
   try { return JSON.parse(localStorage.getItem(MY_COLLEGES_KEY) ?? "[]") ?? []; }

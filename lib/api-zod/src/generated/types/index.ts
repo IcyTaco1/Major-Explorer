@@ -37,4 +37,8 @@ export * from "./myCollegeInput";
 export * from "./myCollegeItem";
 export * from "./myCollegeUpdate";
 export * from "./profileUpdate";
+export * from "./savedCollege";
+export * from "./savedMajorImportInput";
+export * from "./savedMajorItem";
+export * from "./savedMajorUpsert";
 export * from "./yearPlan";

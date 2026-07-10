@@ -20,3 +20,5 @@
 export * from "./userProfiles";
 export * from "./myColleges";
 export * from "./collegeDeadlines";
+export * from "./savedMajors";
+export * from "./rateLimitCounters";

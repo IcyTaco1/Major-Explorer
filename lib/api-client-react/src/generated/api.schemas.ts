@@ -369,6 +369,43 @@ export interface ImportResult {
   skipped: number;
 }
 
+/**
+ * A College snapshot plus when it was bookmarked
+ */
+export type SavedCollege = College & {
+  /** Epoch milliseconds when the college was bookmarked */
+  savedAt: number;
+};
+
+export interface SavedMajorItem {
+  id: number;
+  majorName: string;
+  description: string;
+  /** Real BLS career data captured at save time, or null */
+  career: CareerInfo | null;
+  colleges: SavedCollege[];
+  /** ISO timestamp when the major was first saved */
+  savedAt: string;
+}
+
+export interface SavedMajorUpsert {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  majorName: string;
+  /** @maxLength 2000 */
+  description: string;
+  career?: CareerInfo | null;
+  /** @maxItems 15 */
+  colleges: SavedCollege[];
+}
+
+export interface SavedMajorImportInput {
+  /** @maxItems 100 */
+  items: SavedMajorUpsert[];
+}
+
 export interface GradeCount {
   /** @nullable */
   gradeLevel: number | null;

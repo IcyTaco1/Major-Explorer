@@ -14,7 +14,7 @@ import { rateLimit } from "../middlewares/rateLimit";
 const router: IRouter = Router();
 
 // AI-backed lookups are expensive (long OpenAI calls), so cap per-user usage.
-const aiRateLimit = rateLimit({ windowMs: 60_000, max: 10 });
+const aiRateLimit = rateLimit({ name: "lookup", windowMs: 60_000, max: 10 });
 
 // ── Real BLS occupation whitelist given to the AI classifier ────────────────
 // The AI never invents wages or growth figures. It only picks the single SOC

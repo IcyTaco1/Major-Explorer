@@ -5,8 +5,9 @@ import { Bookmark, GraduationCap, ChevronUp, ChevronDown, Trash2, SortAsc, X } f
 import { CollegeFitBadge, type SortMode } from "@/lib/collegeFit";
 import type { SavedCollege, SavedData } from "@/lib/storage";
 
-export default function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userGpa }: {
+export default function SavedView({ saved, loading, onUnsaveMajor, onUnsaveCollege, userGpa }: {
   saved: SavedData;
+  loading?: boolean;
   onUnsaveMajor: (majorName: string) => void;
   onUnsaveCollege: (majorName: string, collegeName: string) => void;
   userGpa: number | null;
@@ -23,6 +24,13 @@ export default function SavedView({ saved, onUnsaveMajor, onUnsaveCollege, userG
     mode === "alpha" ? [...colleges].sort((a, b) => a.name.localeCompare(b.name)) : [...colleges].sort((a, b) => a.rank - b.rank);
 
   if (majors.length === 0) {
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-24 text-center px-4">
+          <div className="w-8 h-8 rounded-full border-2 border-muted border-t-foreground animate-spin" />
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center px-4">
         <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-5">

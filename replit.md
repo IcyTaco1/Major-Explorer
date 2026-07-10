@@ -47,19 +47,21 @@ A web app where users type in a college major and instantly get:
 Plus signed-in features (Clerk auth):
 - **My Colleges** — saved per user in Postgres (keyed by Clerk userId), with application status tracker, per-college deadlines (Early Decision / Regular Decision / FAFSA), and notes. A one-time client-side effect imports pre-account localStorage data into the DB.
 - **Roadmap** — grade-level selection (9-12, persisted server-side) with a college-prep roadmap per grade.
-- **Compare** — side-by-side comparison of two saved majors (client-side, from localStorage saved majors), including a career outlook section (median pay, job growth, typical education) from career data captured at save time.
+- **Saved majors** — bookmarked majors saved per user in Postgres (`saved_majors`, keyed by Clerk userId, unique per `majorName`). Each row stores the major description, a career snapshot, and a list of saved college snapshots. The client is server-authoritative (React Query) with optimistic cache updates; a one-time client-side effect imports pre-account localStorage saved majors into the DB.
+- **Compare** — side-by-side comparison of two saved majors (derived from the server-backed saved majors), including a career outlook section (median pay, job growth, typical education) from career data captured at save time.
 - **Admin dashboard** — stats, charts, and users table; gated server-side by the `ADMIN_EMAILS` env var (comma-separated emails). The Admin nav tab only appears when `GET /api/me` returns `isAdmin: true`.
-- **Profile sync** — GPA/SAT/ACT/goals and interest-quiz results/done state are stored per user in `user_profiles` (synced via `GET/PUT /api/me`). localStorage is kept as a fast-start cache; on load, a one-time reconciliation runs (server wins; local-only data is imported to the account). Sync failures surface a toast and suppress the "Saved" flash. Saved majors remain localStorage-only.
+- **Profile sync** — GPA/SAT/ACT/goals and interest-quiz results/done state are stored per user in `user_profiles` (synced via `GET/PUT /api/me`). localStorage is kept as a fast-start cache; on load, a one-time reconciliation runs (server wins; local-only data is imported to the account). Sync failures surface a toast and suppress the "Saved" flash. Saved majors are now DB-backed (see **Saved majors** above); localStorage is only a one-time migration source.
 
 **Tech:** React + Vite frontend, Express API backend, OpenAI (gpt-5.2) for data generation, Clerk auth, Drizzle + Postgres.
 
-**Server hardening:** All AI endpoints (`/api/chat`, `/api/majors/lookup`, `/api/majors/curriculum`) require Clerk auth and are rate-limited per user (sliding window, 10/min, `Retry-After` on 429) via `src/middlewares/rateLimit.ts`. Sage chat injects student context (profile, quiz results, saved colleges) into its system prompt. `/api/careers` stays public.
+**Server hardening:** All AI endpoints (`/api/chat`, `/api/majors/lookup`, `/api/majors/curriculum`) require Clerk auth and are rate-limited per user via `src/middlewares/rateLimit.ts` — a **Postgres-backed fixed-window** limiter (10/min, `Retry-After` on 429, `rate_limit_counters` table with atomic `INSERT..ON CONFLICT..RETURNING`, keyed by userId with IP fallback, fails open on DB error). Being DB-backed, limits survive server restarts. Each limiter passes a `name` (e.g. `chat`, `lookup`) to isolate buckets. Sage chat injects student context (profile, quiz results, saved colleges) into its system prompt. `/api/careers` stays public.
 
 **Key endpoints:**
 - `POST /api/majors/lookup` — auth + rate-limited; accepts `{ major: string }` (max 120 chars), returns `{ major, description, topColleges[] }`
 - `POST /api/colleges/deadlines` — auth-required; researches a college's official ED/RD/FAFSA-priority deadlines via OpenAI Responses API + web_search (strict JSON schema output), cached in `college_deadlines` table (60-day TTL; 1-hour TTL when no dates found so failures are retryable). UI: "Find official dates" button per saved college in My Colleges with sources + one-click "Use these dates".
 - `GET/PUT /api/me` — profile (`gradeLevel`, `gpa`, `sat`, `act`, `goals`, `quizResults`, `quizDone`, `isAdmin`)
 - `GET/POST /api/my-colleges`, `PATCH/DELETE /api/my-colleges/:id`, `POST /api/my-colleges/import` — per-user saved colleges (status, deadlines, notes)
+- `GET/PUT /api/saved-majors`, `DELETE /api/saved-majors/:id`, `POST /api/saved-majors/import` — auth-required; per-user bookmarked majors. PUT upserts by `(userId, majorName)` and preserves the original `savedAt` (stable ordering). Caps: majorName ≤120, description ≤2000, colleges ≤15, import ≤100 items
 - `GET /api/admin/stats`, `GET /api/admin/users` — admin-only
 
 ## TypeScript & Composite Projects

@@ -37,6 +37,9 @@ import type {
   MyCollegeItem,
   MyCollegeUpdate,
   ProfileUpdate,
+  SavedMajorImportInput,
+  SavedMajorItem,
+  SavedMajorUpsert,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -1264,3 +1267,335 @@ export function useListAdminUsers<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary List the current user's saved (bookmarked) majors
+ */
+export const getListSavedMajorsUrl = () => {
+  return `/api/saved-majors`;
+};
+
+export const listSavedMajors = async (
+  options?: RequestInit,
+): Promise<SavedMajorItem[]> => {
+  return customFetch<SavedMajorItem[]>(getListSavedMajorsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSavedMajorsQueryKey = () => {
+  return [`/api/saved-majors`] as const;
+};
+
+export const getListSavedMajorsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSavedMajors>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listSavedMajors>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListSavedMajorsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSavedMajors>>> = ({
+    signal,
+  }) => listSavedMajors({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSavedMajors>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListSavedMajorsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSavedMajors>>
+>;
+export type ListSavedMajorsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List the current user's saved (bookmarked) majors
+ */
+
+export function useListSavedMajors<
+  TData = Awaited<ReturnType<typeof listSavedMajors>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listSavedMajors>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListSavedMajorsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create or replace a saved major (by name) for the current user
+ */
+export const getUpsertSavedMajorUrl = () => {
+  return `/api/saved-majors`;
+};
+
+export const upsertSavedMajor = async (
+  savedMajorUpsert: SavedMajorUpsert,
+  options?: RequestInit,
+): Promise<SavedMajorItem> => {
+  return customFetch<SavedMajorItem>(getUpsertSavedMajorUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(savedMajorUpsert),
+  });
+};
+
+export const getUpsertSavedMajorMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertSavedMajor>>,
+    TError,
+    { data: BodyType<SavedMajorUpsert> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof upsertSavedMajor>>,
+  TError,
+  { data: BodyType<SavedMajorUpsert> },
+  TContext
+> => {
+  const mutationKey = ["upsertSavedMajor"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof upsertSavedMajor>>,
+    { data: BodyType<SavedMajorUpsert> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return upsertSavedMajor(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpsertSavedMajorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof upsertSavedMajor>>
+>;
+export type UpsertSavedMajorMutationBody = BodyType<SavedMajorUpsert>;
+export type UpsertSavedMajorMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create or replace a saved major (by name) for the current user
+ */
+export const useUpsertSavedMajor = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertSavedMajor>>,
+    TError,
+    { data: BodyType<SavedMajorUpsert> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof upsertSavedMajor>>,
+  TError,
+  { data: BodyType<SavedMajorUpsert> },
+  TContext
+> => {
+  return useMutation(getUpsertSavedMajorMutationOptions(options));
+};
+
+/**
+ * Imports previously device-stored majors; existing majors are skipped
+ * @summary Bulk import saved majors (idempotent)
+ */
+export const getImportSavedMajorsUrl = () => {
+  return `/api/saved-majors/import`;
+};
+
+export const importSavedMajors = async (
+  savedMajorImportInput: SavedMajorImportInput,
+  options?: RequestInit,
+): Promise<ImportResult> => {
+  return customFetch<ImportResult>(getImportSavedMajorsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(savedMajorImportInput),
+  });
+};
+
+export const getImportSavedMajorsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importSavedMajors>>,
+    TError,
+    { data: BodyType<SavedMajorImportInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof importSavedMajors>>,
+  TError,
+  { data: BodyType<SavedMajorImportInput> },
+  TContext
+> => {
+  const mutationKey = ["importSavedMajors"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof importSavedMajors>>,
+    { data: BodyType<SavedMajorImportInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return importSavedMajors(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ImportSavedMajorsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof importSavedMajors>>
+>;
+export type ImportSavedMajorsMutationBody = BodyType<SavedMajorImportInput>;
+export type ImportSavedMajorsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Bulk import saved majors (idempotent)
+ */
+export const useImportSavedMajors = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importSavedMajors>>,
+    TError,
+    { data: BodyType<SavedMajorImportInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof importSavedMajors>>,
+  TError,
+  { data: BodyType<SavedMajorImportInput> },
+  TContext
+> => {
+  return useMutation(getImportSavedMajorsMutationOptions(options));
+};
+
+/**
+ * @summary Remove a saved major
+ */
+export const getDeleteSavedMajorUrl = (id: number) => {
+  return `/api/saved-majors/${id}`;
+};
+
+export const deleteSavedMajor = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteSavedMajorUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteSavedMajorMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSavedMajor>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteSavedMajor>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteSavedMajor"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteSavedMajor>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteSavedMajor(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteSavedMajorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteSavedMajor>>
+>;
+
+export type DeleteSavedMajorMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Remove a saved major
+ */
+export const useDeleteSavedMajor = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSavedMajor>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteSavedMajor>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteSavedMajorMutationOptions(options));
+};

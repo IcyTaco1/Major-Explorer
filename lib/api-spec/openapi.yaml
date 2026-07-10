@@ -445,6 +445,112 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /saved-majors:
+    get:
+      operationId: listSavedMajors
+      tags: [saved-majors]
+      summary: List the current user's saved (bookmarked) majors
+      responses:
+        "200":
+          description: Saved majors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SavedMajorItem"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: upsertSavedMajor
+      tags: [saved-majors]
+      summary: Create or replace a saved major (by name) for the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SavedMajorUpsert"
+      responses:
+        "200":
+          description: Saved major
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedMajorItem"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /saved-majors/import:
+    post:
+      operationId: importSavedMajors
+      tags: [saved-majors]
+      summary: Bulk import saved majors (idempotent)
+      description: Imports previously device-stored majors; existing majors are skipped
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SavedMajorImportInput"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /saved-majors/{id}:
+    delete:
+      operationId: deleteSavedMajor
+      tags: [saved-majors]
+      summary: Remove a saved major
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -910,6 +1016,78 @@ components:
       required:
         - imported
         - skipped
+    SavedCollege:
+      description: A College snapshot plus when it was bookmarked
+      allOf:
+        - $ref: "#/components/schemas/College"
+        - type: object
+          properties:
+            savedAt:
+              type: number
+              description: Epoch milliseconds when the college was bookmarked
+          required:
+            - savedAt
+    SavedMajorItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        majorName:
+          type: string
+        description:
+          type: string
+        career:
+          anyOf:
+            - $ref: "#/components/schemas/CareerInfo"
+            - type: "null"
+          description: Real BLS career data captured at save time, or null
+        colleges:
+          type: array
+          items:
+            $ref: "#/components/schemas/SavedCollege"
+        savedAt:
+          type: string
+          description: ISO timestamp when the major was first saved
+      required:
+        - id
+        - majorName
+        - description
+        - career
+        - colleges
+        - savedAt
+    SavedMajorUpsert:
+      type: object
+      properties:
+        majorName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 2000
+        career:
+          anyOf:
+            - $ref: "#/components/schemas/CareerInfo"
+            - type: "null"
+        colleges:
+          type: array
+          maxItems: 15
+          items:
+            $ref: "#/components/schemas/SavedCollege"
+      required:
+        - majorName
+        - description
+        - colleges
+    SavedMajorImportInput:
+      type: object
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/SavedMajorUpsert"
+      required:
+        - items
     GradeCount:
       type: object
       properties:

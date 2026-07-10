@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef, type KeyboardEvent } from "react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLookupMajor } from "@workspace/api-client-react";
-import type { College, MyCollegeItem } from "@workspace/api-client-react";
+import type { College, MyCollegeItem, CareerInfo } from "@workspace/api-client-react";
 import { computeFit, CollegeFitBadge, type FitTier } from "@/lib/collegeFit";
-import { persistSaved, type SavedData, type UserProfile } from "@/lib/storage";
+import { type SavedData, type UserProfile } from "@/lib/storage";
 import { POPULAR_MAJORS, matchMajors, renderMajorMatch } from "@/lib/majorSearch";
 import TiltedCard from "@/components/TiltedCard";
 import RevealBorderGlow from "@/components/RevealBorderGlow";
@@ -16,9 +16,11 @@ import {
   Check, ChevronRight, ChevronLeft,
 } from "lucide-react";
 
-export default function ExploreView({ saved, setSaved, myColleges, onToggleMyCollege, initialMajor, userGpa, profile }: {
+export default function ExploreView({ saved, onSaveMajor, onUnsaveMajor, onToggleSavedCollege, myColleges, onToggleMyCollege, initialMajor, userGpa, profile }: {
   saved: SavedData;
-  setSaved: (d: SavedData) => void;
+  onSaveMajor: (majorName: string, description: string, career?: CareerInfo | null) => void;
+  onUnsaveMajor: (majorName: string) => void;
+  onToggleSavedCollege: (college: College, majorName: string, description: string, career?: CareerInfo | null) => void;
   myColleges: MyCollegeItem[];
   onToggleMyCollege: (college: College, majorName: string) => void;
   initialMajor?: string;
@@ -111,18 +113,13 @@ export default function ExploreView({ saved, setSaved, myColleges, onToggleMyCol
   const saveMajor = useCallback(() => {
     if (!lookupMajor.data) return;
     const { major, description, career } = lookupMajor.data;
-    const updated = { ...saved };
-    if (!updated[major]) updated[major] = { majorName: major, description, savedAt: Date.now(), colleges: [], career };
-    else { updated[major].description = description; updated[major].career = career; }
-    setSaved(updated); persistSaved(updated);
-  }, [saved, lookupMajor.data, setSaved]);
+    onSaveMajor(major, description, career);
+  }, [lookupMajor.data, onSaveMajor]);
 
   const unsaveMajor = useCallback(() => {
     if (!lookupMajor.data) return;
-    const updated = { ...saved };
-    delete updated[lookupMajor.data.major];
-    setSaved(updated); persistSaved(updated);
-  }, [saved, lookupMajor.data, setSaved]);
+    onUnsaveMajor(lookupMajor.data.major);
+  }, [lookupMajor.data, onUnsaveMajor]);
 
   const isInSaved = (majorName: string, collegeName: string) =>
     !!saved[majorName]?.colleges.find((c) => c.name === collegeName);
@@ -132,21 +129,9 @@ export default function ExploreView({ saved, setSaved, myColleges, onToggleMyCol
     isInSaved(majorName, collegeName) || isInMyColleges(collegeName, majorName);
 
   const toggleSavedCollege = useCallback((college: College, majorName: string, description: string) => {
-    const updated = { ...saved };
-    if (!updated[majorName]) {
-      updated[majorName] = {
-        majorName, description, savedAt: Date.now(), colleges: [],
-        career: lookupMajor.data?.major === majorName ? lookupMajor.data.career : undefined,
-      };
-    }
-    const already = updated[majorName].colleges.find((c) => c.name === college.name);
-    if (already) {
-      updated[majorName].colleges = updated[majorName].colleges.filter((c) => c.name !== college.name);
-    } else {
-      updated[majorName].colleges = [...updated[majorName].colleges, { ...college, savedAt: Date.now() }];
-    }
-    setSaved(updated); persistSaved(updated);
-  }, [saved, setSaved]);
+    const career = lookupMajor.data?.major === majorName ? lookupMajor.data.career : undefined;
+    onToggleSavedCollege(college, majorName, description, career);
+  }, [lookupMajor.data, onToggleSavedCollege]);
 
 
   const isIdle = lookupMajor.isIdle && !lookupMajor.data;

@@ -4,8 +4,10 @@ import { Show } from "@clerk/react";
 import {
   useGetMe, useUpdateMe, useListMyColleges, useCreateMyCollege, useDeleteMyCollege,
   useImportMyColleges, getListMyCollegesQueryKey, getGetMeQueryKey,
+  useListSavedMajors, useUpsertSavedMajor, useDeleteSavedMajor, useImportSavedMajors,
+  getListSavedMajorsQueryKey,
 } from "@workspace/api-client-react";
-import type { College, ProfileUpdate } from "@workspace/api-client-react";
+import type { College, ProfileUpdate, CareerInfo, SavedMajorItem } from "@workspace/api-client-react";
 import { Home, Sun, Moon, Settings } from "lucide-react";
 import PillNav, { type PillNavItem } from "@/components/PillNav";
 import ExploreView from "@/views/ExploreView";
@@ -23,9 +25,9 @@ import SettingsDialog from "@/components/SettingsDialog";
 import ChatWidget from "@/components/ChatWidget";
 import UserMenu from "@/components/UserMenu";
 import {
-  loadSaved, persistSaved, loadProfile, persistProfile, loadMyColleges,
-  MY_COLLEGES_KEY, QUIZ_DONE_KEY, QUIZ_RESULTS_KEY,
-  type SavedData, type UserProfile,
+  loadSaved, loadProfile, persistProfile, loadMyColleges,
+  MY_COLLEGES_KEY, SAVED_KEY, QUIZ_DONE_KEY, QUIZ_RESULTS_KEY,
+  type SavedData, type SavedCollege, type UserProfile,
 } from "@/lib/storage";
 import {
   loadTheme, persistTheme, applyTheme, resolveTheme, systemPrefersDark, type Theme,
@@ -38,7 +40,6 @@ type AppView = "explore" | "suggested" | "careers" | "roadmap" | "compare" | "co
 
 export default function AppShell() {
   const [view, setView] = useState<AppView>("explore");
-  const [saved, setSaved] = useState<SavedData>(loadSaved);
   const [profile, setProfile] = useState<UserProfile>(loadProfile);
   const qc = useQueryClient();
   const meQuery = useGetMe();
@@ -48,12 +49,134 @@ export default function AppShell() {
   const createMyCollege = useCreateMyCollege();
   const deleteMyCollege = useDeleteMyCollege();
   const importMyColleges = useImportMyColleges();
+  const savedMajorsQuery = useListSavedMajors();
+  const upsertSavedMajor = useUpsertSavedMajor();
+  const deleteSavedMajor = useDeleteSavedMajor();
+  const importSavedMajors = useImportSavedMajors();
   const updateMe = useUpdateMe();
   const importAttemptedRef = useRef(false);
+  const savedImportRef = useRef(false);
 
   const invalidateMyColleges = useCallback(() => {
     qc.invalidateQueries({ queryKey: getListMyCollegesQueryKey() });
   }, [qc]);
+  const invalidateSavedMajors = useCallback(() => {
+    qc.invalidateQueries({ queryKey: getListSavedMajorsQueryKey() });
+  }, [qc]);
+
+  // Server is the source of truth for saved (bookmarked) majors. Derive the
+  // legacy SavedData shape from the query so the views stay unchanged.
+  const saved = useMemo<SavedData>(() => {
+    const out: SavedData = {};
+    for (const row of savedMajorsQuery.data ?? []) {
+      out[row.majorName] = {
+        majorName: row.majorName,
+        description: row.description,
+        savedAt: Date.parse(row.savedAt) || 0,
+        colleges: (row.colleges ?? []) as SavedCollege[],
+        career: row.career,
+      };
+    }
+    return out;
+  }, [savedMajorsQuery.data]);
+
+  // Read the freshest list straight from the query cache (not a closure over a
+  // possibly-stale render) so rapid successive edits compute from prior
+  // optimistic writes instead of clobbering each other (last-write-wins).
+  const readSaved = useCallback(
+    () => qc.getQueryData<SavedMajorItem[]>(getListSavedMajorsQueryKey()) ?? [],
+    [qc],
+  );
+  const writeSavedOptimistic = useCallback(
+    (
+      majorName: string,
+      patch: { description: string; career: CareerInfo | null; colleges: SavedCollege[] },
+    ) => {
+      qc.setQueryData<SavedMajorItem[]>(getListSavedMajorsQueryKey(), (prev) => {
+        const arr = prev ?? [];
+        const idx = arr.findIndex((r) => r.majorName === majorName);
+        if (idx >= 0) {
+          const next = arr.slice();
+          next[idx] = { ...next[idx], ...patch };
+          return next;
+        }
+        // Temp negative id until the refetch replaces it with the real row.
+        return [{ id: -Date.now(), majorName, savedAt: new Date().toISOString(), ...patch }, ...arr];
+      });
+    },
+    [qc],
+  );
+
+  const saveMajor = useCallback(
+    (majorName: string, description: string, career?: CareerInfo | null) => {
+      const existing = readSaved().find((r) => r.majorName === majorName);
+      const colleges = (existing?.colleges ?? []) as SavedCollege[];
+      const resolvedCareer = career ?? existing?.career ?? null;
+      writeSavedOptimistic(majorName, { description, career: resolvedCareer, colleges });
+      upsertSavedMajor.mutate(
+        { data: { majorName, description, career: resolvedCareer, colleges } },
+        { onSuccess: invalidateSavedMajors },
+      );
+    },
+    [readSaved, writeSavedOptimistic, upsertSavedMajor, invalidateSavedMajors],
+  );
+
+  const unsaveMajor = useCallback(
+    (majorName: string) => {
+      const id = readSaved().find((r) => r.majorName === majorName)?.id;
+      qc.setQueryData<SavedMajorItem[]>(getListSavedMajorsQueryKey(), (prev) =>
+        (prev ?? []).filter((r) => r.majorName !== majorName),
+      );
+      // Negative id = optimistic row not yet persisted; refetch to get the real one.
+      if (id == null || id < 0) { invalidateSavedMajors(); return; }
+      deleteSavedMajor.mutate({ id }, { onSuccess: invalidateSavedMajors });
+    },
+    [readSaved, qc, deleteSavedMajor, invalidateSavedMajors],
+  );
+
+  const toggleSavedCollege = useCallback(
+    (college: College, majorName: string, description: string, career?: CareerInfo | null) => {
+      const existing = readSaved().find((r) => r.majorName === majorName);
+      const current = (existing?.colleges ?? []) as SavedCollege[];
+      const already = current.some((c) => c.name === college.name);
+      const nextColleges: SavedCollege[] = already
+        ? current.filter((c) => c.name !== college.name)
+        : [...current, { ...college, savedAt: Date.now() }];
+      const resolvedDescription = existing?.description ?? description;
+      const resolvedCareer = existing?.career ?? career ?? null;
+      writeSavedOptimistic(majorName, {
+        description: resolvedDescription,
+        career: resolvedCareer,
+        colleges: nextColleges,
+      });
+      upsertSavedMajor.mutate(
+        { data: { majorName, description: resolvedDescription, career: resolvedCareer, colleges: nextColleges } },
+        { onSuccess: invalidateSavedMajors },
+      );
+    },
+    [readSaved, writeSavedOptimistic, upsertSavedMajor, invalidateSavedMajors],
+  );
+
+  const unsaveCollege = useCallback(
+    (majorName: string, collegeName: string) => {
+      const existing = readSaved().find((r) => r.majorName === majorName);
+      if (!existing) return;
+      const nextColleges = ((existing.colleges ?? []) as SavedCollege[]).filter(
+        (c) => c.name !== collegeName,
+      );
+      const resolvedCareer = existing.career ?? null;
+      writeSavedOptimistic(majorName, {
+        description: existing.description,
+        career: resolvedCareer,
+        colleges: nextColleges,
+      });
+      upsertSavedMajor.mutate(
+        { data: { majorName, description: existing.description, career: resolvedCareer, colleges: nextColleges } },
+        { onSuccess: invalidateSavedMajors },
+      );
+    },
+    [readSaved, writeSavedOptimistic, upsertSavedMajor, invalidateSavedMajors],
+  );
 
   // Persist profile / quiz changes to the account (server is source of truth).
   // Resolves true on success; on failure shows a toast and resolves false.
@@ -98,6 +221,33 @@ export default function AppShell() {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myCollegesQuery.isSuccess]);
+
+  // One-time migration: move majors bookmarked in localStorage (pre-accounts)
+  // into the DB, then drop the local copy. Existing server rows win.
+  useEffect(() => {
+    if (!savedMajorsQuery.isSuccess || savedImportRef.current) return;
+    savedImportRef.current = true;
+    const local = Object.values(loadSaved());
+    const items = local
+      .filter((m) => m && typeof m.majorName === "string")
+      .map((m) => ({
+        majorName: m.majorName,
+        description: m.description ?? "",
+        career: m.career ?? null,
+        colleges: (m.colleges ?? []).slice(0, 15),
+      }));
+    if (items.length === 0) { localStorage.removeItem(SAVED_KEY); return; }
+    importSavedMajors.mutate(
+      { data: { items: items.slice(0, 100) } },
+      {
+        onSuccess: () => {
+          localStorage.removeItem(SAVED_KEY);
+          invalidateSavedMajors();
+        },
+      },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedMajorsQuery.isSuccess]);
 
   const toggleMyCollege = useCallback((college: College, majorName: string) => {
     const existing = myColleges.find((c) => c.collegeName === college.name && c.major === majorName);
@@ -203,20 +353,6 @@ export default function AppShell() {
 
   const savedMajorCount = Object.keys(saved).length;
   const savedCollegeCount = myColleges.length;
-
-  const unsaveMajor = (majorName: string) => {
-    const updated = { ...saved };
-    delete updated[majorName];
-    setSaved(updated); persistSaved(updated);
-  };
-
-  const unsaveCollege = (majorName: string, collegeName: string) => {
-    const updated = { ...saved };
-    if (updated[majorName]) {
-      updated[majorName].colleges = updated[majorName].colleges.filter((c) => c.name !== collegeName);
-    }
-    setSaved(updated); persistSaved(updated);
-  };
 
   const handleQuizComplete = (majors: MajorSuggestion[]) => {
     setQuizResults(majors);
@@ -342,7 +478,10 @@ export default function AppShell() {
 
       {view === "explore" && (
         <ExploreView
-          saved={saved} setSaved={setSaved}
+          saved={saved}
+          onSaveMajor={saveMajor}
+          onUnsaveMajor={unsaveMajor}
+          onToggleSavedCollege={toggleSavedCollege}
           myColleges={myColleges} onToggleMyCollege={toggleMyCollege}
           initialMajor={exploreInitialMajor}
           userGpa={profile.gpa}
@@ -361,7 +500,7 @@ export default function AppShell() {
       {view === "compare" && <CompareView majors={compareMajors} userGpa={profile.gpa} />}
       {view === "colleges" && <MyCollegesView userGpa={profile.gpa} />}
       {view === "saved" && (
-        <SavedView saved={saved} onUnsaveMajor={unsaveMajor} onUnsaveCollege={unsaveCollege} userGpa={profile.gpa} />
+        <SavedView saved={saved} loading={savedMajorsQuery.isLoading} onUnsaveMajor={unsaveMajor} onUnsaveCollege={unsaveCollege} userGpa={profile.gpa} />
       )}
       {view === "admin" && (isAdmin ? <AdminView /> : null)}
 

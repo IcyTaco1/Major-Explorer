@@ -8,7 +8,7 @@ import { rateLimit } from "../middlewares/rateLimit";
 
 const router: IRouter = Router();
 
-const chatRateLimit = rateLimit({ windowMs: 60_000, max: 10 });
+const chatRateLimit = rateLimit({ name: "chat", windowMs: 60_000, max: 10 });
 
 const BASE_SYSTEM_PROMPT = `You are a friendly and knowledgeable college advisor for Next Steps, an app that helps students explore college majors and universities. Your name is Sage.
 

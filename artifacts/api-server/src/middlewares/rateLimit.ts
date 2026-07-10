@@ -1,7 +1,11 @@
 import { getAuth } from "@clerk/express";
 import type { RequestHandler } from "express";
+import { sql, lt } from "drizzle-orm";
+import { db, rateLimitCountersTable } from "@workspace/db";
 
 interface RateLimitOptions {
+  /** Distinguishes limiter buckets (e.g. "chat" vs "lookup"). */
+  name: string;
   /** Time window in milliseconds. */
   windowMs: number;
   /** Max requests allowed per key within the window. */
@@ -9,43 +13,59 @@ interface RateLimitOptions {
 }
 
 /**
- * Simple in-memory sliding-window rate limiter keyed by Clerk userId
- * (falls back to IP for unauthenticated requests). Suitable for a
- * single-process server; state resets on restart.
+ * Postgres-backed fixed-window rate limiter keyed by Clerk userId (falls back
+ * to IP for unauthenticated requests). Backing it in the DB keeps counts
+ * accurate across server restarts, so a limit can't be bypassed by triggering
+ * a restart. Fixed-window allows up to ~2x burst at a window boundary, an
+ * acceptable tradeoff for cost control.
+ *
+ * On a DB error the limiter fails OPEN (allows the request and logs) so a
+ * transient DB blip can't take down all AI features.
  */
-export function rateLimit({ windowMs, max }: RateLimitOptions): RequestHandler {
-  const hits = new Map<string, number[]>();
-
-  // Periodically drop stale keys so the map can't grow unbounded.
-  const cleanup = setInterval(() => {
-    const cutoff = Date.now() - windowMs;
-    for (const [key, timestamps] of hits) {
-      const recent = timestamps.filter((t) => t > cutoff);
-      if (recent.length === 0) {
-        hits.delete(key);
-      } else {
-        hits.set(key, recent);
-      }
-    }
-  }, windowMs);
-  cleanup.unref();
-
+export function rateLimit({ name, windowMs, max }: RateLimitOptions): RequestHandler {
   return (req, res, next) => {
-    const { userId } = getAuth(req);
-    const key = userId ?? `ip:${req.ip ?? "unknown"}`;
-    const now = Date.now();
-    const cutoff = now - windowMs;
-    const recent = (hits.get(key) ?? []).filter((t) => t > cutoff);
+    void (async () => {
+      const { userId } = getAuth(req);
+      const key = userId ?? `ip:${req.ip ?? "unknown"}`;
+      const now = Date.now();
+      const windowIndex = Math.floor(now / windowMs);
+      const windowEnd = (windowIndex + 1) * windowMs;
+      const bucketKey = `${name}:${key}:${windowIndex}`;
 
-    if (recent.length >= max) {
-      const retryAfterSec = Math.ceil((recent[0] + windowMs - now) / 1000);
-      res.setHeader("Retry-After", String(Math.max(retryAfterSec, 1)));
-      res.status(429).json({ error: "Too many requests. Please slow down and try again shortly." });
-      return;
-    }
+      // Occasionally sweep expired rows; cheap and needs no timer lifecycle.
+      if (Math.random() < 0.02) {
+        db.delete(rateLimitCountersTable)
+          .where(lt(rateLimitCountersTable.expiresAt, new Date(now)))
+          .catch((err) => req.log.warn({ err }, "rateLimit cleanup failed"));
+      }
 
-    recent.push(now);
-    hits.set(key, recent);
-    next();
+      try {
+        const [row] = await db
+          .insert(rateLimitCountersTable)
+          .values({
+            bucketKey,
+            count: 1,
+            // Keep the row one extra window past its end for lazy cleanup.
+            expiresAt: new Date(windowEnd + windowMs),
+          })
+          .onConflictDoUpdate({
+            target: rateLimitCountersTable.bucketKey,
+            set: { count: sql`${rateLimitCountersTable.count} + 1` },
+          })
+          .returning({ count: rateLimitCountersTable.count });
+
+        if (row && row.count > max) {
+          const retryAfterSec = Math.max(Math.ceil((windowEnd - now) / 1000), 1);
+          res.setHeader("Retry-After", String(retryAfterSec));
+          res.status(429).json({ error: "Too many requests. Please slow down and try again shortly." });
+          return;
+        }
+        next();
+      } catch (err) {
+        // Fail open: never let a DB issue block legitimate traffic.
+        req.log.error({ err }, "rateLimit check failed; allowing request");
+        next();
+      }
+    })();
   };
 }

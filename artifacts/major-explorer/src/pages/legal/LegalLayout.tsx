@@ -4,7 +4,7 @@ import { Milestone, ArrowLeft } from "lucide-react";
 
 // Set this to your real contact email before submitting to app stores or
 // distributing to schools — both policies reference it.
-export const LEGAL_CONTACT_EMAIL: string | null = null;
+export const LEGAL_CONTACT_EMAIL: string | null = "next.steps.contact.here@gmail.com";
 
 export function ContactLine() {
   return (

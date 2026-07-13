@@ -8,6 +8,8 @@ import { setAuthTokenGetter } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 import SiteBackground from "@/components/SiteBackground";
 import LandingPage from "@/pages/LandingPage";
+import PrivacyPage from "@/pages/legal/PrivacyPage";
+import TermsPage from "@/pages/legal/TermsPage";
 import AppShell from "@/AppShell";
 import { clerkPubKey, clerkProxyUrl, clerkAppearance } from "@/lib/clerk";
 import { basePath, stripBase } from "@/lib/basePath";
@@ -126,6 +128,8 @@ function ClerkProviderWithRoutes() {
               <Route path="/app" component={AppRoute} />
               <Route path="/sign-in/*?" component={SignInPage} />
               <Route path="/sign-up/*?" component={SignUpPage} />
+              <Route path="/privacy" component={PrivacyPage} />
+              <Route path="/terms" component={TermsPage} />
               <Route component={NotFound} />
             </Switch>
             <Toaster />

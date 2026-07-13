@@ -1,4 +1,4 @@
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import GlassSurface from "@/components/GlassSurface";
 import { Milestone, Sparkles, ChevronRight } from "lucide-react";
 
@@ -56,6 +56,20 @@ export default function LandingPage() {
           ))}
         </div>
       </main>
+
+      <footer className="w-full py-6 px-6 border-t border-border">
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
+          <span>© 2026 Next Steps</span>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-foreground transition-colors underline underline-offset-2" data-testid="link-privacy">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors underline underline-offset-2" data-testid="link-terms">
+              Terms of Service
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

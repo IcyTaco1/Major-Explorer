@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   User, Palette, SlidersHorizontal, ShieldCheck, Sun, Moon, Monitor,
-  Check, UserCog, LogOut, ChevronRight, RotateCcw, type LucideIcon,
+  Check, UserCog, LogOut, ChevronRight, RotateCcw, FileText, type LucideIcon,
 } from "lucide-react";
 import { useGpaGoals, GpaGoalsControls } from "@/components/GpaGoals";
 import { basePath } from "@/lib/basePath";
@@ -32,6 +33,7 @@ export default function SettingsDialog({ initial, onSaveProfile, theme, onChange
   onClose: () => void;
 }) {
   const [section, setSection] = useState<SettingsSection>("account");
+  const [, setLocation] = useLocation();
   const { user } = useUser();
   const { signOut, openUserProfile } = useClerk();
   const gpaState = useGpaGoals(initial);
@@ -166,11 +168,19 @@ export default function SettingsDialog({ initial, onSaveProfile, theme, onChange
                 </div>
                 <div className="flex items-start gap-3 p-4 rounded-2xl border border-border bg-background">
                   <ShieldCheck className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
-                  <p className="text-sm text-muted-foreground">Your GPA, test scores, goals, quiz results, and saved colleges are saved privately to your account, so they follow you across devices. They're only used to personalize your experience — never shared or sold. Saved majors stay in this browser.</p>
+                  <p className="text-sm text-muted-foreground">Your grade level, GPA, test scores, goals, quiz results, saved majors, and saved colleges are saved privately to your account, so they follow you across devices. They're only used to personalize your experience — never shared or sold.</p>
                 </div>
                 <div className="space-y-2">
                   <button onClick={() => { onRetakeQuiz(); onClose(); }} className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors">
                     <span className="flex items-center gap-3"><RotateCcw className="w-4 h-4 text-muted-foreground" /> Retake the interest quiz</span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                  <button onClick={() => { onClose(); setLocation("/privacy"); }} className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors" data-testid="button-privacy-policy">
+                    <span className="flex items-center gap-3"><FileText className="w-4 h-4 text-muted-foreground" /> Privacy Policy</span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                  <button onClick={() => { onClose(); setLocation("/terms"); }} className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors" data-testid="button-terms">
+                    <span className="flex items-center gap-3"><FileText className="w-4 h-4 text-muted-foreground" /> Terms of Service</span>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>

@@ -324,7 +324,7 @@ export const getGetCareersQueryKey = () => {
 
 export const getGetCareersQueryOptions = <
   TData = Awaited<ReturnType<typeof getCareers>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponse>,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getCareers>>,
@@ -351,7 +351,7 @@ export const getGetCareersQueryOptions = <
 export type GetCareersQueryResult = NonNullable<
   Awaited<ReturnType<typeof getCareers>>
 >;
-export type GetCareersQueryError = ErrorType<unknown>;
+export type GetCareersQueryError = ErrorType<ErrorResponse>;
 
 /**
  * @summary List all careers with BLS data
@@ -359,7 +359,7 @@ export type GetCareersQueryError = ErrorType<unknown>;
 
 export function useGetCareers<
   TData = Awaited<ReturnType<typeof getCareers>>,
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorResponse>,
 >(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getCareers>>,

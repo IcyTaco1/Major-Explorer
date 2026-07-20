@@ -263,7 +263,7 @@ ${WHITELIST_TEXT}`;
 });
 
 // ── GET /careers — serve the full BLS dataset for the Browse Careers view ────
-router.get("/careers", (_req, res) => {
+router.get("/careers", requireAuth, (_req, res) => {
   res.json(getAllCareers());
 });
 
@@ -275,7 +275,13 @@ router.post("/majors/curriculum", requireAuth, aiRateLimit, async (req, res) => 
     return;
   }
 
-  const { major, college } = parsed.data;
+  const major = parsed.data.major.trim();
+  const college = parsed.data.college.trim();
+
+  if (!major || !college) {
+    res.status(400).json({ error: "Invalid request. Please provide a major and college name." });
+    return;
+  }
 
   const prompt = `You are a college academic advisor. Create a realistic 4-year course plan for a student studying "${major}" at "${college}".
 

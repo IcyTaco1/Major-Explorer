@@ -122,6 +122,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CareerInfo"
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /chat:
     post:
       operationId: chat
